@@ -1,0 +1,1947 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>高考选专业 · 按分数看出路 | 100个专业AI时代前景</title>
+  <meta name="description" content="输入你的分数段，看每个专业在你的分数层次能上什么学校、有什么出路。100个大学专业，AI时代+分数段双维度分析。">
+  <meta property="og:title" content="高考选专业 · 按分数看出路">
+  <meta property="og:description" content="同一个专业，600分和500分的出路差距有多大？100个专业，AI时代+分数段双维度分析。">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <link href="https://cdn.bootcdn.net/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+  <style>
+    html { scroll-behavior: smooth; }
+    .exposure-bar { height: 6px; border-radius: 3px; transition: width 0.6s ease; }
+    .card-hover { transition: transform 0.2s, box-shadow 0.2s; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+    .tab-active { border-bottom: 3px solid #3b82f6; color: #3b82f6; font-weight: 600; }
+    .fade-in { animation: fadeIn 0.3s ease-in; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .compare-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    @media (max-width: 640px) {
+      .tab-scroll { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+      .tab-scroll::-webkit-scrollbar { display: none; }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen">
+
+  <!-- ===== HEADER ===== -->
+  <header class="bg-white shadow-sm sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 py-3">
+      <div class="flex items-start justify-between">
+        <div class="flex-1 min-w-0">
+          <h1 class="text-lg md:text-2xl font-bold text-gray-900 leading-tight">高考选专业 · 按分数看出路</h1>
+          <p class="text-xs md:text-sm text-gray-500 mt-0.5">100个专业 × AI冲击 × 分数段三维分析</p>
+        </div>
+        <button id="compare-btn" onclick="toggleCompare()" class="ml-3 mt-1 px-3 py-1.5 text-xs rounded-lg border border-gray-300 hover:bg-gray-100 transition whitespace-nowrap">
+          对比
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== HOME VIEW ===== -->
+  <main id="home-view" class="max-w-6xl mx-auto px-4 py-6">
+    <!-- Score tier selector -->
+    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-5">
+      <div class="text-sm font-medium text-gray-600 mb-3">你的高考分数段（影响专业推荐优先级）</div>
+      <div class="flex gap-2 flex-wrap">
+        <button id="tier-btn-high" onclick="selectTier('high')"
+          class="tier-btn flex-1 min-w-0 px-3 py-2.5 rounded-lg text-sm font-medium border-2 transition-all text-center border-gray-200 text-gray-500 hover:border-green-300">
+          <div class="font-bold">600+ 分</div>
+          <div class="text-xs mt-0.5 opacity-75">985 / 211</div>
+        </button>
+        <button id="tier-btn-mid" onclick="selectTier('mid')"
+          class="tier-btn flex-1 min-w-0 px-3 py-2.5 rounded-lg text-sm font-medium border-2 transition-all text-center border-blue-500 bg-blue-50 text-blue-700">
+          <div class="font-bold">500–600 分</div>
+          <div class="text-xs mt-0.5 opacity-75">普通一本 / 二本</div>
+        </button>
+        <button id="tier-btn-low" onclick="selectTier('low')"
+          class="tier-btn flex-1 min-w-0 px-3 py-2.5 rounded-lg text-sm font-medium border-2 transition-all text-center border-gray-200 text-gray-500 hover:border-orange-300">
+          <div class="font-bold">500分以下</div>
+          <div class="text-xs mt-0.5 opacity-75">普通二本及以下</div>
+        </button>
+      </div>
+    </div>
+    <!-- Category tabs -->
+    <div id="cat-tabs" class="flex flex-wrap tab-scroll gap-1 mb-4 border-b border-gray-200">
+      <button class="tab-btn tab-active px-4 py-2 text-sm whitespace-nowrap" data-cat="all" onclick="filterCategory('all', this)">全部</button>
+    </div>
+    <!-- Search -->
+    <div class="mb-6">
+      <input id="search-input" type="text" placeholder="搜索专业名称..." class="w-full md:w-80 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" oninput="filterMajors()">
+    </div>
+    <!-- Card grid -->
+    <div id="major-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    </div>
+  </main>
+
+  <!-- ===== DETAIL VIEW ===== -->
+  <section id="detail-view" class="max-w-6xl mx-auto px-4 py-6 hidden">
+    <button onclick="showHome()" class="flex items-center text-blue-600 hover:text-blue-800 mb-6 text-sm">
+      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      返回列表
+    </button>
+    <div id="detail-content"></div>
+  </section>
+
+  <!-- ===== COMPARE VIEW ===== -->
+  <section id="compare-view" class="max-w-6xl mx-auto px-4 py-6 hidden">
+    <button onclick="showHome()" class="flex items-center text-blue-600 hover:text-blue-800 mb-6 text-sm">
+      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      返回列表
+    </button>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <select id="compare-a" class="compare-select w-full px-4 py-3 border border-blue-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10" onchange="renderCompare()">
+        <option value="">选择专业 A</option>
+      </select>
+      <select id="compare-b" class="compare-select w-full px-4 py-3 border border-orange-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 pr-10" onchange="renderCompare()">
+        <option value="">选择专业 B</option>
+      </select>
+    </div>
+    <div id="compare-content"></div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="bg-white border-t border-gray-200 mt-12 py-6">
+    <div class="max-w-6xl mx-auto px-4">
+      <div class="bg-amber-50 border border-amber-200 rounded-lg px-5 py-4 mb-4 text-sm text-amber-800">
+        <p class="font-semibold mb-1">⚠️ 使用说明</p>
+        <p>本工具对 <strong>2026-2031 年</strong>中国就业市场进行 AI 冲击预估，<strong>所有评分均为 AI 估算，不构成选专业建议</strong>，请结合自身兴趣、能力和实际情况判断。</p>
+      </div>
+      <div class="text-center text-xs text-gray-400">
+        <p>评分框架参考 <a href="https://karpathy.ai/jobs/" target="_blank" class="text-blue-400 hover:underline">Karpathy AI Jobs</a>（美国劳工统计局职业数据），叠加中国市场修正：就业结构差异、监管环境、产业结构权重、AI 工具本土化速度。</p>
+        <p class="mt-1">专业目录来源：教育部《普通高等学校本科专业目录（2025年）》· 由 Mr Z 用 AI 制作</p>
+      </div>
+    </div>
+  </footer>
+
+<script>
+// ===== DATA =====
+const DATA = {
+  categories: [
+    { id: "engineering", name: "工学" },
+    { id: "science", name: "理学" },
+    { id: "economics", name: "经济学" },
+    { id: "management", name: "管理学" },
+    { id: "medicine", name: "医学" },
+    { id: "law", name: "法学" },
+    { id: "literature", name: "文学" },
+    { id: "art", name: "艺术学" },
+    { id: "education", name: "教育学" },
+    { id: "agriculture", name: "农学" },
+    { id: "history", name: "历史学" }
+  ],
+  majors: [
+    {
+      id: "cs",
+      name: "计算机科学与技术",
+      category: "engineering",
+      aiExposure: 8.5,
+      radar: { automationRisk: 8, demandGrowth: 8, salaryPotential: 9, entryBarrier: 7, aiCollaboration: 9 },
+      replacing: ["基础CRUD开发和模板代码编写", "简单bug修复和代码审查", "标准化测试用例编写", "代码文档和注释自动生成", "格式规范检查"],
+      notReplacing: ["复杂系统架构设计和技术选型决策", "模糊业务需求的翻译和优先级判断", "跨团队协调和技术方案推动"],
+      demandTrend: "总量持平或增长，但结构剧变。初级开发岗被AI工具压缩，一个中级工程师+AI顶过去三个初级。能驾驭AI工具的高级工程师和架构师需求快速增长。入门门槛急剧提高。",
+      directions: ["学会用AI写代码而不是跟AI比写代码，重点练审查AI输出和判断方案好坏", "往具体行业方向靠——懂医疗、金融、制造业的工程师更难替代", "练系统设计能力，别只刷算法题"],
+      summary: "依然值得学，但'会写代码'正从核心竞争力变成基本功——关键看你能不能从执行者变成定义问题的人。"
+    },
+    {
+      id: "law",
+      name: "法学",
+      category: "law",
+      aiExposure: 6.5,
+      radar: { automationRisk: 6, demandGrowth: 5, salaryPotential: 7, entryBarrier: 8, aiCollaboration: 6 },
+      replacing: ["法律文书和合同的初稿生成", "案例检索和法规查询", "合同条款审查和风险标记", "标准化法律意见书模板填充"],
+      notReplacing: ["庭审辩论、谈判和即时策略调整", "复杂案件的法律策略制定和风险判断", "客户信任建立和敏感事项的人际沟通"],
+      demandTrend: "传统法律服务岗位增长缓慢，但合规、数据隐私、AI伦理等新兴法律领域需求在上升。基层法务助理岗位会被AI压缩，但需要综合判断力的律师角色短期内稳定。",
+      directions: ["专攻AI治理、数据隐私、跨境合规等新兴法律领域", "培养庭审和谈判实战能力，这是AI最弱的环节", "学会用AI工具提升法律检索效率，做AI增强型律师"],
+      summary: "法学的价值正从'信息检索'转向'判断和说服'——纯背法条没前途，但能在法庭上赢的人永远稀缺。"
+    },
+    {
+      id: "finance",
+      name: "金融学",
+      category: "economics",
+      aiExposure: 7,
+      radar: { automationRisk: 7, demandGrowth: 5, salaryPotential: 8, entryBarrier: 6, aiCollaboration: 7 },
+      replacing: ["量化分析和数据建模", "财务报表分析和基础研报撰写", "风险评估模型的标准化运算", "交易执行和订单处理"],
+      notReplacing: ["客户关系维护和高净值客户服务", "复杂交易结构设计和谈判", "市场判断中的直觉和经验性决策"],
+      demandTrend: "量化分析岗正在被AI吃掉，纯分析端岗位会大幅缩减。但客户端、投行业务端、私募股权等需要人脉和信任的方向短期内稳定。金融科技方向需求增长。",
+      directions: ["方向应该偏客户端和业务端，不是纯分析端", "学金融科技，理解AI在金融中的应用场景", "考虑细分领域：财富管理、并购、合规比纯量化分析更抗AI"],
+      summary: "金融学高暴露但不会消失——关键区别是你做的是机器能做的分析，还是只有人能做的关系和判断。"
+    },
+    {
+      id: "clinical-med",
+      name: "临床医学",
+      category: "medicine",
+      aiExposure: 4,
+      radar: { automationRisk: 3, demandGrowth: 8, salaryPotential: 8, entryBarrier: 9, aiCollaboration: 7 },
+      replacing: ["影像诊断的初步筛查和标记", "电子病历的结构化整理", "标准化诊疗方案的推荐", "药物相互作用的自动检查"],
+      notReplacing: ["手术操作和复杂临床操作", "面对病人的沟通、安抚和临床判断", "多系统疾病的综合诊断和治疗决策"],
+      demandTrend: "需求持续增长，老龄化社会推动刚需。AI辅助诊断会让医生效率更高，但不会减少医生需求——反而可能因为医疗可及性提升而增加需求。收入稳定且上升通道清晰。",
+      directions: ["拥抱AI辅助诊断工具，做AI增强型医生而不是抵触技术", "外科方向受AI冲击最小，内科方向需要更强的综合判断力", "关注精准医疗、基因治疗等前沿方向"],
+      summary: "临床医学是少数AI暴露度不高、同时薪资和需求都在增长的方向——前提是你能扛住漫长的培养周期。"
+    },
+    {
+      id: "visual-design",
+      name: "视觉传达设计",
+      category: "art",
+      aiExposure: 8.5,
+      radar: { automationRisk: 8, demandGrowth: 4, salaryPotential: 5, entryBarrier: 4, aiCollaboration: 8 },
+      replacing: ["基础平面设计和排版", "图标、banner等标准化视觉素材生成", "配色方案和设计风格探索", "产品原型和线框图的初稿生成"],
+      notReplacing: ["品牌策略定义——为什么要这样设计", "用户研究和设计决策的商业判断", "与客户和团队的沟通协调"],
+      demandTrend: "纯执行层的设计工作正在被AI大幅压缩，初级设计师岗位减少明显。但懂策略、懂用户、能定义设计方向的高级角色反而更稀缺。行业正在从'出图'转向'出策略'。",
+      directions: ["必须往上走——从视觉执行转向品牌策略和用户体验设计", "学会用AI设计工具提升效率，把自己从出图中解放出来", "跨界能力值钱：懂设计+懂商业 或 懂设计+懂技术"],
+      summary: "纯出图的设计师正在被AI替代，但能定义'为什么要这样设计'的人反而更值钱——学不学取决于你愿不愿意往策略方向走。"
+    },
+    {
+      id: "accounting",
+      name: "会计学",
+      category: "management",
+      aiExposure: 7.5,
+      radar: { automationRisk: 8, demandGrowth: 3, salaryPotential: 6, entryBarrier: 5, aiCollaboration: 6 },
+      replacing: ["日常记账、凭证录入和账务处理", "标准化财务报表生成", "发票审核和费用报销审批", "税务申报表的填写和提交", "基础审计底稿编制"],
+      notReplacing: ["复杂税务筹划和跨境税务安排", "管理层沟通和财务战略建议", "舞弊调查和异常交易的专业判断"],
+      demandTrend: "传统会计岗位正在快速萎缩，财务机器人和AI记账工具已经在大量企业落地。基层会计岗位减少趋势不可逆。但财务分析、管理会计、税务筹划等高端方向仍有需求。",
+      directions: ["尽早转向管理会计和财务分析方向，远离纯记账岗位", "考CPA的同时学数据分析工具，做数据驱动的财务决策", "关注税务筹划和合规方向，这些需要人的判断力"],
+      summary: "传统会计岗位正在消失，但财务决策和税务筹划的需求还在——选会计的话，目标必须是CFO方向，不是记账方向。"
+    },
+    {
+      id: "journalism",
+      name: "新闻学",
+      category: "literature",
+      aiExposure: 8,
+      radar: { automationRisk: 8, demandGrowth: 3, salaryPotential: 4, entryBarrier: 4, aiCollaboration: 7 },
+      replacing: ["简讯、快报等标准化新闻稿撰写", "数据新闻的图表生成和数据可视化", "新闻素材的搜集和整理", "社交媒体内容的批量生产"],
+      notReplacing: ["深度调查报道和暗访", "重大事件的现场判断和即时决策", "建立信源关系和获取独家信息"],
+      demandTrend: "传统媒体岗位持续萎缩，但内容营销、品牌传播、短视频内容运营等衍生方向需求在增长。纯文字记者需求下降明显，全媒体运营人才有市场。",
+      directions: ["别只学写稿——学视频拍摄、剪辑、直播等全媒体技能", "往深度内容和调查报道方向走，这是AI最做不了的", "转型内容营销和品牌传播，企业对这方面的需求远大于传统媒体"],
+      summary: "写简讯的记者正在被AI替代，但能做深度报道和全媒体运营的人才仍然稀缺——选新闻学的话，必须往深度或全媒体方向走。"
+    },
+    {
+      id: "math",
+      name: "数学与应用数学",
+      category: "science",
+      aiExposure: 5.5,
+      radar: { automationRisk: 5, demandGrowth: 7, salaryPotential: 7, entryBarrier: 8, aiCollaboration: 8 },
+      replacing: ["标准化数学计算和符号运算", "已知算法的实现和优化", "统计分析和数据处理的常规操作", "数学建模中的模板化步骤"],
+      notReplacing: ["全新数学理论和证明的创造", "将实际问题抽象为数学模型的建模能力", "跨领域的数学应用和创新性问题解决"],
+      demandTrend: "数学是AI时代的基础学科，需求在增长。AI/ML行业需要大量数学功底扎实的人才。同时金融、通信、密码学等领域对数学人才的需求稳定。就业面比想象中宽。",
+      directions: ["AI/机器学习方向是目前数学专业最热门的出路", "辅修或自学编程，纯数学+编程的组合在就业市场非常有竞争力", "金融量化方向仍有需求，但要结合编程能力"],
+      summary: "数学是AI时代的硬通货——暴露度中等但就业面宽，关键是要搭配编程能力，纯理论数学的出路比较窄。"
+    },
+    {
+      id: "software-eng",
+      name: "软件工程",
+      category: "engineering",
+      aiExposure: 8.5,
+      radar: { automationRisk: 8, demandGrowth: 8, salaryPotential: 9, entryBarrier: 7, aiCollaboration: 9 },
+      replacing: ["根据需求文档自动生成代码框架", "单元测试和集成测试的自动编写", "代码重构和性能优化建议", "需求原型图的自动生成"],
+      notReplacing: ["软件需求分析和用户访谈", "技术架构选型和团队决策", "跨职能协作和项目管理"],
+      demandTrend: "与计算机科学类似，初级开发需求下降，高级工程师需求上升。AI辅助编程工具让开发效率大幅提升，但也让入行门槛变高。",
+      directions: ["深入掌握AI辅助开发工具如Cursor、GitHub Copilot", "往产品理解和需求分析方向延伸，做懂业务的工程师", "考虑全栈+AI方向，一个人能完成完整产品开发"],
+      summary: "软件工程和计算机科学高度重叠——核心逻辑一样，'会用AI写代码'比'会写代码'更值钱。"
+    },
+    {
+      id: "ai",
+      name: "人工智能",
+      category: "engineering",
+      aiExposure: 7,
+      radar: { automationRisk: 5, demandGrowth: 10, salaryPotential: 10, entryBarrier: 9, aiCollaboration: 10 },
+      replacing: ["基础模型微调和标准化训练流程", "数据清洗和标注的部分工作", "常规AI应用的搭建和部署"],
+      notReplacing: ["AI系统的架构创新和新算法研究", "AI产品的业务场景定义", "AI伦理和安全的判断与治理"],
+      demandTrend: "需求爆发式增长，是目前最热门的工程类专业。但高质量人才极度稀缺，薪资溢价明显。入行门槛高，数学和编程基础要求严格。",
+      directions: ["数学基础是核心，线性代数、概率统计、优化理论要扎实", "选择垂直应用方向：医疗AI、金融AI、自动驾驶等", "学会从零搭建AI应用，不只是调用API"],
+      summary: "AI专业是目前最有前景的工程方向，但入学容易学好难——数学基础决定上限，选这个方向要做好长期投入的准备。"
+    },
+    {
+      id: "data-science",
+      name: "数据科学与大数据技术",
+      category: "engineering",
+      aiExposure: 8,
+      radar: { automationRisk: 7, demandGrowth: 8, salaryPotential: 8, entryBarrier: 6, aiCollaboration: 9 },
+      replacing: ["数据清洗和预处理的标准化流程", "基础数据可视化报表生成", "常规统计分析和描述性报告"],
+      notReplacing: ["业务问题的数据化定义", "数据洞察的业务解读和决策支撑", "复杂数据产品的架构设计"],
+      demandTrend: "数据类岗位需求持续增长，但行业分化明显。金融、互联网、医疗数据岗位薪资高，传统行业数据岗位偏低。AI工具让数据分析效率提升，但也提高了对分析师的要求。",
+      directions: ["学数据分析要同时学业务理解，纯技术型数据分析师价值在下降", "SQL+Python是基础，机器学习是加分项", "选一个垂直行业深扎，数据+行业知识的组合最有竞争力"],
+      summary: "数据科学方向前景不错，但'会用工具跑数据'已经不够——能把数据翻译成业务决策才是核心价值。"
+    },
+    {
+      id: "ee",
+      name: "电子信息工程",
+      category: "engineering",
+      aiExposure: 5.5,
+      radar: { automationRisk: 5, demandGrowth: 7, salaryPotential: 7, entryBarrier: 7, aiCollaboration: 7 },
+      replacing: ["电路设计的仿真验证和标准化检查", "信号处理算法的自动优化", "PCB布线的初步自动化"],
+      notReplacing: ["硬件系统集成和调试", "新型传感器和芯片的创新设计", "电磁兼容性分析和现场测试"],
+      demandTrend: "随着智能硬件、物联网、新能源汽车的发展，需求稳定增长。国产替代趋势下，国内半导体相关需求大幅上升。",
+      directions: ["往芯片设计或嵌入式系统方向深化，这两个方向国内需求旺盛", "学会硬件+软件的交叉能力，做软硬结合的工程师", "关注新能源汽车电子和智能设备方向"],
+      summary: "电子信息工程是相对扎实的工程方向，AI冲击中等，国产芯片需求推动就业机会增长——选这个方向要做好沉下心来搞硬件的准备。"
+    },
+    {
+      id: "telecom",
+      name: "通信工程",
+      category: "engineering",
+      aiExposure: 5,
+      radar: { automationRisk: 4, demandGrowth: 6, salaryPotential: 7, entryBarrier: 7, aiCollaboration: 7 },
+      replacing: ["网络规划的仿真分析", "故障检测和诊断的自动化", "标准化网络配置和部署脚本"],
+      notReplacing: ["复杂网络系统的架构设计", "5G/6G新技术的研发和标准制定", "现场工程调测和客户技术支撑"],
+      demandTrend: "5G建设基本完成后需求有所回落，但6G研发和卫星通信方向需求上升。华为、中兴等头部企业仍是重要就业去向。",
+      directions: ["关注6G、卫星互联网等下一代通信技术方向", "往AI+通信的交叉方向发展，如AI驱动的网络优化", "考虑国际化方向，海外通信基础设施建设需要通信人才"],
+      summary: "通信工程是传统强势工科，AI冲击相对较小，但要避开5G建设红利期已过的认知误区——6G和卫星通信是新机会。"
+    },
+    {
+      id: "electrical",
+      name: "电气工程及其自动化",
+      category: "engineering",
+      aiExposure: 4.5,
+      radar: { automationRisk: 4, demandGrowth: 8, salaryPotential: 7, entryBarrier: 7, aiCollaboration: 6 },
+      replacing: ["电力系统的负荷预测和自动调度", "设备故障的预测性维护算法", "变电站的远程监控和自动控制"],
+      notReplacing: ["电力系统现场安装调试和维护", "高压设备的人工巡检和应急处置", "新型电力系统的规划和设计"],
+      demandTrend: "新能源革命推动需求大幅增长，光伏、风电、储能系统都需要大量电气工程师。双碳目标下，这个方向是政策重点支持领域。",
+      directions: ["新能源方向是最大机会：光伏、风电、储能、充电桩", "智能电网和综合能源系统方向需求快速增长", "考虑电力央企和新能源头部企业，待遇稳定且上升"],
+      summary: "电气工程是新能源时代的核心专业之一——双碳目标下需求大幅增长，选这个方向的时机恰好。"
+    },
+    {
+      id: "mechanical",
+      name: "机械工程",
+      category: "engineering",
+      aiExposure: 4,
+      radar: { automationRisk: 3, demandGrowth: 6, salaryPotential: 6, entryBarrier: 6, aiCollaboration: 6 },
+      replacing: ["标准件的参数化设计和图纸生成", "有限元分析的前处理和结果解读", "产品装配仿真和干涉检查"],
+      notReplacing: ["复杂机械系统的创新设计", "制造工艺的现场优化和调试", "客户需求转化为工程方案的技术判断"],
+      demandTrend: "传统制造业需求稳定，高端装备、机器人、新能源汽车方向需求增长。整体就业面宽但薪资提升相对慢，高薪需要进入头部企业或高端方向。",
+      directions: ["往机器人、智能制造方向转，传统机械设计的竞争压力大", "学习数字化设计工具，CAD/CAE是基础，数字孪生是趋势", "新能源汽车是机械工程师的大机会，电池、底盘、电驱动方向需求旺盛"],
+      summary: "机械工程AI冲击较低，但传统制造业天花板也低——想突破的话，往机器人或新能源汽车方向走是正确选择。"
+    },
+    {
+      id: "automation",
+      name: "自动化",
+      category: "engineering",
+      aiExposure: 5,
+      radar: { automationRisk: 4, demandGrowth: 8, salaryPotential: 7, entryBarrier: 7, aiCollaboration: 8 },
+      replacing: ["PLC程序的标准化编写和优化", "工业流程的仿真建模", "传感器数据的基础异常检测"],
+      notReplacing: ["复杂控制系统的架构设计和调试", "工厂现场的自动化改造方案", "多系统联调和故障排查"],
+      demandTrend: "工业自动化和智能制造推动需求持续增长，是制造业升级的核心方向。机器人、工业互联网、智能工厂都需要自动化工程师。",
+      directions: ["机器人系统集成是目前最热门的细分方向", "学工业互联网和数据采集，做工业数字化方向", "考虑进入自动化设备厂商或大型制造企业"],
+      summary: "自动化是工业升级的核心方向，AI冲击中等但应用机会极多——智能制造推动这个专业进入了黄金时期。"
+    },
+    {
+      id: "civil",
+      name: "土木工程",
+      category: "engineering",
+      aiExposure: 3.5,
+      radar: { automationRisk: 3, demandGrowth: 3, salaryPotential: 5, entryBarrier: 5, aiCollaboration: 5 },
+      replacing: ["结构计算和施工图的辅助生成", "工程量清单的自动统计", "BIM模型的碰撞检测和优化"],
+      notReplacing: ["工程现场管理和协调", "地质勘察和复杂地基处理判断", "工程事故应急处置和技术决策"],
+      demandTrend: "随着国内基建投资放缓，需求明显下降。大量土木毕业生面临就业压力，薪资增长缓慢。海外基础设施建设是相对较好的出路。",
+      directions: ["考虑往建筑信息化和数字化方向转型", "海外市场：一带一路相关国家基础设施建设仍有需求", "考研转方向：城市规划、交通工程等相邻领域"],
+      summary: "土木工程是目前就业压力较大的工程专业，国内基建放缓趋势明显——选这个方向需要对就业前景有清醒预期。"
+    },
+    {
+      id: "architecture",
+      name: "建筑学",
+      category: "engineering",
+      aiExposure: 6,
+      radar: { automationRisk: 5, demandGrowth: 3, salaryPotential: 5, entryBarrier: 7, aiCollaboration: 8 },
+      replacing: ["建筑方案的初步生成和变体探索", "建筑效果图和渲染图的制作", "施工图的合规检查和自动优化"],
+      notReplacing: ["建筑创意概念和空间体验设计", "与甲方的沟通和需求理解", "建筑项目的全流程管理"],
+      demandTrend: "房地产下行压力传导到建筑设计行业，整体需求收缩。AI生成工具正在改变建筑设计流程，但也在压低初级设计师的价值。",
+      directions: ["往建筑策划和前期咨询方向发展，摆脱纯出图", "学AI辅助设计工具，提升效率的同时转向创意策略层面", "考虑城市更新、文化建筑等政府主导的细分方向"],
+      summary: "建筑学受房地产下行和AI双重冲击，就业压力大——选之前要想清楚自己是否真的热爱建筑创作本身。"
+    },
+    {
+      id: "biomedical",
+      name: "生物医学工程",
+      category: "engineering",
+      aiExposure: 6,
+      radar: { automationRisk: 5, demandGrowth: 8, salaryPotential: 7, entryBarrier: 8, aiCollaboration: 8 },
+      replacing: ["医学影像的初步分析和标注", "医疗设备的数据采集和信号处理", "临床试验数据的统计分析"],
+      notReplacing: ["医疗设备的创新研发和临床验证", "医工结合的跨学科产品设计", "医疗监管和器械注册的专业判断"],
+      demandTrend: "医疗AI和智能医疗设备快速发展，交叉学科需求增长明显。既懂医学又懂工程的人才极度稀缺，薪资溢价高。",
+      directions: ["医疗AI方向：影像AI、诊断辅助、手术机器人", "医疗器械创业和研发方向，需要医工结合能力", "考虑赴美或欧洲深造，这个方向国际化机会多"],
+      summary: "生物医学工程是AI时代最被看好的交叉学科之一——既有AI暴露也有AI机会，关键是能不能成为医学和工程的真正桥梁。"
+    },
+    {
+      id: "vehicle",
+      name: "车辆工程",
+      category: "engineering",
+      aiExposure: 5,
+      radar: { automationRisk: 4, demandGrowth: 8, salaryPotential: 8, entryBarrier: 6, aiCollaboration: 7 },
+      replacing: ["车辆仿真分析和碰撞测试的部分流程", "零部件参数化设计和优化", "整车匹配计算的自动化"],
+      notReplacing: ["整车系统集成和实车调试", "驾驶性和NVH的主观评价", "整车开发项目的跨部门协调"],
+      demandTrend: "新能源汽车革命带来需求爆发，比亚迪、蔚小理、华为汽车等持续招人。传统燃油车方向放缓，电动化、智能化方向快速增长。",
+      directions: ["新能源整车方向：三电系统（电池、电机、电控）是核心", "智能驾驶方向：域控制器、车载软件、传感器融合", "进入造车新势力或头部新能源车企，薪资和成长空间优于传统车企"],
+      summary: "车辆工程借新能源东风迎来黄金期——选传统汽车方向已落后，选新能源+智能驾驶方向正是时候。"
+    },
+    {
+      id: "chemical-eng",
+      name: "化学工程与工艺",
+      category: "engineering",
+      aiExposure: 4.5,
+      radar: { automationRisk: 4, demandGrowth: 5, salaryPotential: 6, entryBarrier: 6, aiCollaboration: 6 },
+      replacing: ["化工流程的仿真模拟和参数优化", "实验数据分析和配方筛选", "安全风险的自动评估"],
+      notReplacing: ["化工装置的现场开车和处理异常", "新工艺路线的创新开发", "危险化学品的现场应急处置"],
+      demandTrend: "新材料、新能源电池材料、精细化工方向需求增长，传统石化方向放缓。半导体材料和电池材料是当前热点。",
+      directions: ["转向新能源材料：锂电池正负极材料、电解质、固态电池", "半导体化学品和电子特气方向，国产替代需求旺盛", "考虑出国深造，化工和材料的高端研发岗位看重学历背景"],
+      summary: "化工方向整体稳定，但要主动往新能源材料和半导体材料方向靠——传统石化方向天花板明显，新材料方向机会更多。"
+    },
+    {
+      id: "physics",
+      name: "物理学",
+      category: "science",
+      aiExposure: 4.5,
+      radar: { automationRisk: 4, demandGrowth: 6, salaryPotential: 6, entryBarrier: 9, aiCollaboration: 7 },
+      replacing: ["数值模拟的标准化计算流程", "实验数据的自动处理和分析", "文献综述和理论推导的辅助工作"],
+      notReplacing: ["物理直觉和理论模型的创新构建", "实验方案的设计和参数把握", "跨领域物理应用的判断"],
+      demandTrend: "纯物理研究岗位极少，主要出路是跨行。量子计算、半导体、芯片、金融量化是物理专业最热门的转行方向，就业质量取决于转行选择。",
+      directions: ["量子计算：IBM、谷歌、百度、阿里都在布局，物理背景是核心优势", "半导体和芯片方向：物理基础是设备工程师的底层能力", "金融量化：物理+编程是量化基金的标配人才画像"],
+      summary: "物理学本身就业面窄，但物理思维是最好的底层能力之一——选物理的人要从第一天就想好转行方向，不能只靠物理本身就业。"
+    },
+    {
+      id: "statistics",
+      name: "统计学",
+      category: "science",
+      aiExposure: 6.5,
+      radar: { automationRisk: 6, demandGrowth: 7, salaryPotential: 7, entryBarrier: 7, aiCollaboration: 8 },
+      replacing: ["描述性统计和基础假设检验的自动化", "标准化统计报告的生成", "数据可视化的初步制作"],
+      notReplacing: ["统计模型的选择和假设判断", "实验设计和抽样方案的设计", "统计结果的业务解读和决策建议"],
+      demandTrend: "数据驱动决策推动统计类人才需求持续增长，金融、医药、互联网、政府统计机构都有需求。AI工具让统计更高效，但也更需要懂统计原理的人来把关。",
+      directions: ["生物统计方向：医药研发和临床试验需要大量统计人才，海外机会多", "金融统计和精算：风险管理和保险精算薪资高且稳定", "学机器学习，统计+ML的组合是数据科学岗的有力背景"],
+      summary: "统计学是AI时代很好的底层学科，暴露度中等但就业面广——关键是要把统计应用到具体领域，别做纯理论统计。"
+    },
+    {
+      id: "biotech",
+      name: "生物技术",
+      category: "science",
+      aiExposure: 5.5,
+      radar: { automationRisk: 5, demandGrowth: 7, salaryPotential: 6, entryBarrier: 8, aiCollaboration: 8 },
+      replacing: ["基因序列分析和生物信息学计算", "药物筛选的高通量实验设计", "文献调研和数据整理"],
+      notReplacing: ["湿实验操作和实验结果的专业判断", "新型生物技术路线的创新开发", "临床转化的监管和伦理判断"],
+      demandTrend: "生物制药、基因治疗、合成生物学方向需求增长，但整体就业竞争激烈。国内生物医药产业快速发展，但高质量岗位集中在头部企业和顶尖院校附近。",
+      directions: ["生物信息学和计算生物学是最有前景的交叉方向，学编程是关键", "合成生物学是当前资本热门赛道，初创公司机会多", "考虑出国读博，生物类研究岗位看重学历背景"],
+      summary: "生物技术有前景但就业路径相对窄——不打算读研的话要慎重，高质量岗位大多需要硕士以上学历。"
+    },
+    {
+      id: "applied-chem",
+      name: "应用化学",
+      category: "science",
+      aiExposure: 4,
+      radar: { automationRisk: 3, demandGrowth: 5, salaryPotential: 5, entryBarrier: 6, aiCollaboration: 6 },
+      replacing: ["化合物性质预测和分子模拟", "实验条件的优化搜索", "分析检测数据的自动处理"],
+      notReplacing: ["实验室操作和样品处理", "复杂未知物的定性定量分析", "新型功能材料的探索合成"],
+      demandTrend: "新材料、环保、食品安全检测方向需求稳定，但薪资增长缓慢。新能源材料和半导体化学品是目前溢价最高的细分方向。",
+      directions: ["往新能源材料方向转：电池材料、光伏材料是当前热点", "环境检测和食品安全监管方向，政府和第三方检测机构需求稳定", "考研是大多数应用化学毕业生的标配，提升就业层次"],
+      summary: "应用化学就业面较稳定但薪资提升空间有限——主动往新能源材料或半导体材料靠，是拉开差距的关键。"
+    },
+    {
+      id: "economics",
+      name: "经济学",
+      category: "economics",
+      aiExposure: 6,
+      radar: { automationRisk: 6, demandGrowth: 5, salaryPotential: 7, entryBarrier: 6, aiCollaboration: 7 },
+      replacing: ["经济数据的自动采集和整理", "标准化经济报告和研究摘要", "市场调研数据的基础分析"],
+      notReplacing: ["经济政策的判断和建议", "宏观趋势的解读和预测", "跨机构的经济谈判和沟通"],
+      demandTrend: "经济学本科就业面相对窄，更多作为考研或出国深造的垫脚石。金融机构、咨询公司、政府部门是主要去向，但竞争激烈。",
+      directions: ["经济学+数据分析是很好的组合，补编程能力提升竞争力", "考研转金融、会计、数据分析等应用性更强的方向", "考公和体制内是经济学毕业生的重要选择"],
+      summary: "经济学学的是思维框架，本科直接就业面偏窄——要么继续深造，要么早点补数据分析和行业知识，别指望光靠经济学理论找到好工作。"
+    },
+    {
+      id: "international-trade",
+      name: "国际经济与贸易",
+      category: "economics",
+      aiExposure: 6.5,
+      radar: { automationRisk: 6, demandGrowth: 4, salaryPotential: 5, entryBarrier: 4, aiCollaboration: 6 },
+      replacing: ["贸易文件的起草和审核", "关税税率查询和贸易合规检查", "市场调研报告的基础数据整理"],
+      notReplacing: ["跨文化谈判和客户关系维护", "贸易争端的处理和谈判策略", "新市场开拓和合作伙伴开发"],
+      demandTrend: "全球化放缓和贸易保护主义抬头对这个方向造成冲击，传统外贸岗位需求下降。但跨境电商、海外仓、供应链管理方向需求在增长。",
+      directions: ["转向跨境电商：亚马逊、TikTok Shop等平台的运营和供应链", "东南亚、中东、非洲等新兴市场开拓，语言能力是核心差异", "供应链管理和物流优化方向，实体经济需求稳定"],
+      summary: "传统外贸岗位在萎缩，但跨境电商和新兴市场开拓是新机会——选国贸的话，要早点想清楚往哪个细分方向走。"
+    },
+    {
+      id: "financial-eng",
+      name: "金融工程",
+      category: "economics",
+      aiExposure: 8,
+      radar: { automationRisk: 8, demandGrowth: 5, salaryPotential: 9, entryBarrier: 9, aiCollaboration: 8 },
+      replacing: ["标准化衍生品定价模型的运行", "风险因子的自动提取和建模", "量化策略的回测和优化"],
+      notReplacing: ["新型金融产品的结构设计", "极端市场情景下的风险判断", "监管合规和产品上市的专业决策"],
+      demandTrend: "量化交易和衍生品方向AI冲击明显，初级量化岗位减少。但高端量化策略研究和金融产品创新仍然需要顶尖人才，头部量化机构薪资极高。",
+      directions: ["往量化研究员而非量化执行方向走，重点在策略创新而非工程实现", "深入数学和统计基础，这是金融工程最核心的竞争力", "考虑读到博士再进行业，头部量化机构对学历要求极高"],
+      summary: "金融工程高薪但内卷极烈，AI冲击也在快速到来——要在这个方向成功，必须有顶尖的数学能力，中间段位的人才生存空间正在收窄。"
+    },
+    {
+      id: "business-admin",
+      name: "工商管理",
+      category: "management",
+      aiExposure: 6,
+      radar: { automationRisk: 5, demandGrowth: 4, salaryPotential: 5, entryBarrier: 4, aiCollaboration: 6 },
+      replacing: ["市场分析报告的基础数据整理", "绩效考核数据的自动汇总", "标准化会议记录和流程文档"],
+      notReplacing: ["团队领导和激励", "战略决策和资源配置", "客户关系和业务拓展"],
+      demandTrend: "工商管理本科就业面广但薪资竞争力有限，更多作为综合素质培养。MBA仍是职场晋升通道，但本科直接就业竞争激烈。",
+      directions: ["早点确定细分方向：运营、市场、人力、咨询中选一个深扎", "考虑考取认证：CPA、CFA、PMP等专业认证提升竞争力", "创业方向是工商管理的优势场景，综合视野有帮助"],
+      summary: "工商管理是'万金油'专业，本科就业竞争力一般——要么早点确定细分方向，要么把它作为复合背景的基础，配合其他专业技能。"
+    },
+    {
+      id: "marketing",
+      name: "市场营销",
+      category: "management",
+      aiExposure: 7,
+      radar: { automationRisk: 7, demandGrowth: 6, salaryPotential: 6, entryBarrier: 4, aiCollaboration: 8 },
+      replacing: ["广告文案的初稿生成和A/B测试", "用户画像分析和受众定向", "社交媒体内容的排期和基础运营"],
+      notReplacing: ["品牌策略和营销创意的核心判断", "大客户关系和销售谈判", "新市场和新用户群的开拓"],
+      demandTrend: "数字营销方向需求持续增长，AI工具改变了营销工作方式但没有消除需求。擅长用AI工具做营销自动化的人反而更值钱。",
+      directions: ["学会用AI工具做内容营销自动化，这是现在的核心竞争力", "往品牌策略和创意方向走，这是AI最难替代的部分", "增长黑客和数据驱动营销方向，需要同时懂营销和数据"],
+      summary: "市场营销方向需求稳定，AI工具改变了工作方式但没有消灭岗位——善用AI工具的营销人反而更有竞争力。"
+    },
+    {
+      id: "info-management",
+      name: "信息管理与信息系统",
+      category: "management",
+      aiExposure: 7,
+      radar: { automationRisk: 6, demandGrowth: 6, salaryPotential: 6, entryBarrier: 5, aiCollaboration: 7 },
+      replacing: ["IT系统需求文档的初稿生成", "数据库查询和报表的自动生成", "系统运维的标准化操作和监控"],
+      notReplacing: ["业务系统的需求调研和分析", "IT系统和业务流程的整合设计", "信息安全和数据治理的策略制定"],
+      demandTrend: "介于IT和管理之间的跨界专业，需求稳定。数字化转型推动企业对这类复合型人才的需求，但竞争来自计算机专业和管理专业两侧。",
+      directions: ["往数字化转型咨询方向发展，懂业务又懂技术是核心优势", "考数据分析方向的认证：SQL、Python、Power BI是基础工具", "大型企业的信息化部门或咨询公司是主要就业方向"],
+      summary: "信管是典型的'两头不靠'专业——编程不如计算机，管理不如管理类，要靠懂业务+懂技术的交叉能力建立竞争力。"
+    },
+    {
+      id: "big-data-mgmt",
+      name: "大数据管理与应用",
+      category: "management",
+      aiExposure: 7.5,
+      radar: { automationRisk: 7, demandGrowth: 7, salaryPotential: 7, entryBarrier: 5, aiCollaboration: 8 },
+      replacing: ["数据采集和ETL流程的标准化配置", "数据质量检查和清洗的自动化", "基础数据报表和看板的生成"],
+      notReplacing: ["数据战略和数据资产的规划", "数据产品的业务需求定义", "跨部门数据治理的协调推动"],
+      demandTrend: "数据要素市场化推动数据管理人才需求增长。企业数据中台建设、数据资产化运营是当前热点，但AI工具也在压缩初级数据岗位。",
+      directions: ["往数据产品经理方向发展，懂业务+懂数据是核心", "学习数据治理和数据资产管理，这是企业级需求", "补充数据分析技能：SQL、Python、数据可视化工具"],
+      summary: "大数据管理是新兴专业，需求在增长但方向还在形成中——要早点确定自己是往技术端（数据工程）还是业务端（数据产品）走。"
+    },
+    {
+      id: "dentistry",
+      name: "口腔医学",
+      category: "medicine",
+      aiExposure: 3,
+      radar: { automationRisk: 2, demandGrowth: 8, salaryPotential: 9, entryBarrier: 9, aiCollaboration: 5 },
+      replacing: ["牙科影像的自动分析和病变识别", "正畸方案的AI辅助设计", "病历文档的自动生成"],
+      notReplacing: ["口腔检查和诊断操作", "牙科手术和修复操作", "医患沟通和治疗方案制定"],
+      demandTrend: "口腔医疗需求持续增长，消费升级推动高端口腔诊所快速扩张。就业质量高，私立诊所收入可观。AI冲击极低，操作性强。",
+      directions: ["选择口腔颌面外科或正畸等高技术含量方向，收入天花板更高", "考虑自开诊所方向，口腔科是医疗行业中创业门槛相对较低的细分", "继续教育和证书积累是提升收入的关键"],
+      summary: "口腔医学是医学类中性价比最高的专业之一——AI冲击极低、需求高增长、收入可观，缺点是培养周期长且操作要求高。"
+    },
+    {
+      id: "pharmacy",
+      name: "药学",
+      category: "medicine",
+      aiExposure: 6,
+      radar: { automationRisk: 5, demandGrowth: 7, salaryPotential: 6, entryBarrier: 7, aiCollaboration: 8 },
+      replacing: ["药物分子的虚拟筛选和结构预测", "药品调配和发药的部分流程", "药物相互作用的自动检查"],
+      notReplacing: ["新药研发的创新方向判断", "临床药学和用药指导", "药品监管和注册申报的专业工作"],
+      demandTrend: "创新药研发热潮推动高端药学人才需求增长，AI辅助药物发现是当前最热门的方向。但基础药师岗位竞争激烈，薪资增长缓慢。",
+      directions: ["往AI药物发现方向转：计算化学、分子动力学模拟是新技能", "临床药学方向：医院药师需求稳定且有晋升空间", "创新药企的研发方向：CRO/CMO行业仍有需求"],
+      summary: "药学方向分化明显——做创新药研发需要读到博士，做医院药师竞争激烈，AI药物发现是最有前景但也最难进入的方向。"
+    },
+    {
+      id: "nursing",
+      name: "护理学",
+      category: "medicine",
+      aiExposure: 3.5,
+      radar: { automationRisk: 2, demandGrowth: 9, salaryPotential: 5, entryBarrier: 5, aiCollaboration: 5 },
+      replacing: ["护理记录和医嘱的自动录入", "患者生命体征的实时监测和预警", "护理计划的标准化制定"],
+      notReplacing: ["床旁护理操作和患者安抚", "急救和突发状况的即时处置", "长期患者的人文关怀和心理支持"],
+      demandTrend: "老龄化社会推动护理需求持续增长，缺口巨大。但国内护理岗位薪资偏低，工作强度高。海外护理需求旺盛，日韩、欧洲、中东等地的国际化机会好。",
+      directions: ["考虑海外护理方向：日本、德国、中东等地对中国护士有需求，待遇远好于国内", "往专科护理方向发展：ICU、手术室、肿瘤科等专科护士薪资更高", "考研方向：护理管理或护理教育，提升职业天花板"],
+      summary: "护理需求大但国内薪资低——如果选护理，早点规划海外方向或专科护士路线，别走普通病房护士一条路。"
+    },
+    {
+      id: "tcm",
+      name: "中医学",
+      category: "medicine",
+      aiExposure: 3,
+      radar: { automationRisk: 2, demandGrowth: 6, salaryPotential: 5, entryBarrier: 7, aiCollaboration: 4 },
+      replacing: ["中药处方的辅助推荐", "四诊数据的结构化整理", "中医文献检索和知识图谱构建"],
+      notReplacing: ["望闻问切的综合辨证", "针灸推拿等手法治疗", "患者与医生的信任建立"],
+      demandTrend: "国家政策支持中医药发展，基层医疗和养生保健需求增长，但高端中医岗位竞争激烈。海外中医市场在东南亚、欧洲有一定需求。",
+      directions: ["选择针灸或推拿等操作性强的方向，这些最难被AI替代", "往养生健康管理方向拓展，市场化需求增长", "考虑创业方向：中医私人诊所在消费升级背景下有市场"],
+      summary: "中医学AI冲击极低，但市场化程度和薪资天花板有限——选这个方向前要想清楚是否真心认同中医，职业满意度很大程度上取决于个人信念。"
+    },
+    {
+      id: "sociology",
+      name: "社会学",
+      category: "law",
+      aiExposure: 5.5,
+      radar: { automationRisk: 5, demandGrowth: 4, salaryPotential: 4, entryBarrier: 5, aiCollaboration: 6 },
+      replacing: ["问卷数据的统计分析", "社会现象文献综述的整理", "政策报告的基础信息汇总"],
+      notReplacing: ["田野调查和深度访谈", "社会问题的批判性分析和解读", "社会政策的设计和效果评估"],
+      demandTrend: "直接就业面较窄，政府机关、社会组织、研究机构是主要去向。考研是大多数毕业生的选择。数据社会学等交叉方向需求在增长。",
+      directions: ["社会学+数据分析是新兴组合，补充定量研究能力", "往政策研究和社会治理方向发展，政府和智库有需求", "考研转社会工作或公共管理，拓宽就业面"],
+      summary: "社会学本科就业竞争力有限，更多是思维和研究能力的培养——选这个方向要有继续读研的打算，或者早点定好跨界方向。"
+    },
+    {
+      id: "chinese-lit",
+      name: "汉语言文学",
+      category: "literature",
+      aiExposure: 7,
+      radar: { automationRisk: 7, demandGrowth: 3, salaryPotential: 4, entryBarrier: 4, aiCollaboration: 6 },
+      replacing: ["基础文案和内容的初稿生成", "古文翻译和注解的辅助工作", "文学作品的分析报告框架"],
+      notReplacing: ["创意写作和文学创作的核心", "深度文化解读和评论", "教学中的因材施教和情感互动"],
+      demandTrend: "传统就业方向（教师、编辑、文员）需求稳定但不增长，AI冲击基础内容生产类工作。新媒体和内容创业方向是主要出路。",
+      directions: ["往内容创业和新媒体方向走：公众号、短视频、播客等", "考教师资格证，中学语文教师需求稳定", "学一门技能性的副业：新媒体运营、文案策划、品牌内容"],
+      summary: "汉语言文学就业面窄，AI冲击基础文字工作——选这个方向的人要么真心热爱文学，要么早点规划好第二技能。"
+    },
+    {
+      id: "english",
+      name: "英语",
+      category: "literature",
+      aiExposure: 8,
+      radar: { automationRisk: 8, demandGrowth: 3, salaryPotential: 5, entryBarrier: 4, aiCollaboration: 6 },
+      replacing: ["文件翻译和同声传译的基础工作", "英语文案和邮件的撰写", "语言学习内容的批量生产"],
+      notReplacing: ["高端商务谈判中的语言判断", "文化差异的协调和跨文化沟通", "复杂语境下的实时口译"],
+      demandTrend: "AI翻译工具已经大幅压缩初级翻译需求，语言类专业就业压力明显增大。但跨文化沟通、国际商务、外交领域对高级英语能力需求依然存在。",
+      directions: ["英语必须作为工具而不是目的——结合法律、金融、医学等专业，做跨语言的专业人才", "外贸、跨境电商、国际合作等具体业务方向，英语是加分项", "考虑往翻译研究生方向走，高端笔译和口译仍有市场"],
+      summary: "英语单独作为专业就业竞争力在快速下降，AI翻译工具已经改变了这个行业——英语要作为复合能力的一部分，而不是全部。"
+    },
+    {
+      id: "animation",
+      name: "动画",
+      category: "art",
+      aiExposure: 8.5,
+      radar: { automationRisk: 8, demandGrowth: 5, salaryPotential: 5, entryBarrier: 5, aiCollaboration: 9 },
+      replacing: ["动画中间帧的自动生成", "场景和背景的批量制作", "配音和口型同步的自动化"],
+      notReplacing: ["动画风格和视觉叙事的创意定义", "剧情和角色情感的设计", "导演级别的项目把控"],
+      demandTrend: "AI动画工具正在改变行业生产流程，低端动画外包岗位快速减少。但原创内容、IP开发、游戏美术方向仍有需求，头部内容公司对创意人才的需求稳定。",
+      directions: ["学会用AI工具做动画，提升效率而不是被AI替代", "往内容创作和IP开发方向走，原创故事能力是核心", "游戏美术方向：大厂游戏动画需求稳定，薪资相对可观"],
+      summary: "动画行业正在被AI工具深刻改变，纯执行层动画师压力大——要在这个方向生存，必须往创意和导演方向走，做纯技术动画的时代要过去了。"
+    },
+    {
+      id: "digital-media",
+      name: "数字媒体艺术",
+      category: "art",
+      aiExposure: 7.5,
+      radar: { automationRisk: 7, demandGrowth: 6, salaryPotential: 6, entryBarrier: 5, aiCollaboration: 9 },
+      replacing: ["基础数字内容的批量生产", "视频剪辑和特效的标准化处理", "界面设计的初稿生成"],
+      notReplacing: ["交互体验和用户旅程的创意设计", "沉浸式内容和XR体验的创新开发", "内容的策略定位和受众理解"],
+      demandTrend: "元宇宙热潮降温，但XR、数字孪生、游戏等方向需求持续。短视频和内容平台推动数字内容创作需求增长，AI工具改变了创作方式。",
+      directions: ["往用户体验和交互设计方向发展，UX/UI设计需求稳定", "学习XR开发（AR/VR），游戏和沉浸式体验是增长方向", "内容创业方向：短视频、品牌内容、数字营销"],
+      summary: "数字媒体艺术是方向多元的专业，AI工具改变创作流程但没有消灭需求——关键是要在毕业前确定自己往哪个细分方向走。"
+    },
+
+    // ===== 教育学 =====
+    { id: "preschool-education", name: "学前教育", category: "education", aiExposure: 3.5, radar: { automationRisk: 3, demandGrowth: 4, salaryPotential: 3, entryBarrier: 3, aiCollaboration: 5 }, replacing: ["教案模板编写", "儿童行为记录与日报生成", "课堂素材搜集与整理", "家园沟通话术起草"], notReplacing: ["幼儿情感陪伴与安全感建立——这是真人才能给的", "即时观察和应变处理突发状况", "与家长面对面的信任关系维护"], demandTrend: "出生率持续下降，幼儿园已出现关停潮，编制岗竞争极其激烈。三四线城市需求萎缩明显，一线城市高端园仍有空间但门槛在提高。", directions: ["转向早期干预和特殊儿童融合教育方向", "考取心理咨询相关证书做家庭教育顾问", "进入托育行业（0-3岁）抢占政策红利窗口"], summary: "出生率暴跌直接冲击这个专业，除非你能做高端或特殊教育，否则就业压力会越来越大。" },
+    { id: "physical-education", name: "体育教育", category: "education", aiExposure: 2.5, radar: { automationRisk: 2, demandGrowth: 5, salaryPotential: 3, entryBarrier: 4, aiCollaboration: 4 }, replacing: ["训练计划模板生成", "体测数据统计与分析", "比赛视频标注与战术复盘", "运动损伤风险初筛"], notReplacing: ["现场动作示范和即时纠正——身体力行的事AI做不了", "比赛临场指挥和团队士气调动"], demandTrend: "体育中考权重提升+全民健身政策推动，学校体育老师需求稳定。但编制少、代课多的结构性问题依然存在。健身私教市场有增长但内卷。", directions: ["拿运动康复或运动营养方向的交叉认证", "关注青少年体适能培训赛道——家长付费意愿强", "学会用AI做运动数据分析，提升专业壁垒"], summary: "AI替代风险低，政策面利好，但薪资天花板明显——想赚钱要靠交叉技能往康复和私教方向走。" },
+    { id: "special-education", name: "特殊教育", category: "education", aiExposure: 3.0, radar: { automationRisk: 2, demandGrowth: 6, salaryPotential: 4, entryBarrier: 5, aiCollaboration: 5 }, replacing: ["个别化教育计划(IEP)模板生成", "行为数据记录与趋势分析", "辅助沟通板内容设计", "康复训练进度报告撰写"], notReplacing: ["对特殊儿童的耐心陪伴和情绪感知——机器没有共情", "根据个体差异即时调整教学策略"], demandTrend: "融合教育政策推进+自闭症等诊断率上升，需求持续增长。全国特教师资缺口大，尤其是有专业资质的。薪资比普教略高，编制相对好考。", directions: ["深耕自闭症谱系干预方向，考ABA相关认证", "学习AI辅助技术用于特殊儿童沟通和学习", "往融合教育资源教师方向发展，进入普通学校体系"], summary: "少数需求还在涨的教育类专业，入行门槛高反而保护了从业者——建议认真对待。" },
+    { id: "educational-technology", name: "教育技术学", category: "education", aiExposure: 7.0, radar: { automationRisk: 6, demandGrowth: 5, salaryPotential: 5, entryBarrier: 4, aiCollaboration: 8 }, replacing: ["课件制作与多媒体素材加工", "在线课程平台搭建与维护", "教学数据采集与基础分析", "微课视频剪辑与字幕生成", "学习管理系统配置"], notReplacing: ["教学设计的底层逻辑——理解人怎么学", "技术与教育场景的深度适配判断"], demandTrend: "传统教育技术岗位被AI工具大面积替代，但AI+教育的交叉需求在爆发。关键是你得真懂技术，不能只会用PPT和录屏。", directions: ["全力转向AI+教育产品设计方向", "学Python和数据分析，做学习分析(Learning Analytics)", "进EdTech公司做教学设计师，而不是学校电教中心"], summary: "这个专业正在被AI重新定义——还停留在'教老师用电脑'的认知就废了，转向AI教育产品才有未来。" },
+
+    // ===== 农学 =====
+    { id: "agronomy", name: "农学", category: "agriculture", aiExposure: 5.0, radar: { automationRisk: 4, demandGrowth: 4, salaryPotential: 3, entryBarrier: 5, aiCollaboration: 6 }, replacing: ["病虫害图像识别与诊断", "气象数据分析与种植决策建议", "土壤检测报告解读", "产量预测模型计算"], notReplacing: ["田间实际操作与经验判断——土地的事得下地", "育种实验中的创造性设计与长周期观察"], demandTrend: "粮食安全是国家战略，科研院所和种业公司有稳定需求。但基层农技岗薪资低、条件苦，劝退率高。智慧农业方向是增长点但岗位还少。", directions: ["走分子育种+生物信息学方向，读研是必须的", "关注智慧农业和精准农业的技术岗", "考公进农业农村局或农科院体系"], summary: "国家需要但个人回报低，除非读研走育种科研路线，否则性价比不高。" },
+    { id: "veterinary-medicine", name: "动物医学", category: "agriculture", aiExposure: 4.0, radar: { automationRisk: 3, demandGrowth: 6, salaryPotential: 5, entryBarrier: 6, aiCollaboration: 5 }, replacing: ["病例档案管理与用药记录", "影像初步筛查（X光/B超辅助判读）", "常见病症状问诊引导", "饲养管理方案生成"], notReplacing: ["手术操作和临床触诊——手上功夫是核心", "复杂病例的综合诊断与治疗决策"], demandTrend: "宠物经济爆发，宠物医生严重短缺，一线城市成熟兽医月薪可达2-3万。畜牧方向薪资低但稳定。学制长（5年），但回报周期值得。", directions: ["坚定走宠物临床方向，积累手术经验", "关注宠物专科化趋势（眼科/骨科/肿瘤）", "有条件的话考虑开自己的诊所"], summary: "宠物经济红利下少数高回报的农学专业，学制虽长但值得——前提是你真能吃苦熬住前几年。" },
+    { id: "landscape-architecture", name: "园林", category: "agriculture", aiExposure: 5.5, radar: { automationRisk: 5, demandGrowth: 3, salaryPotential: 4, entryBarrier: 4, aiCollaboration: 6 }, replacing: ["效果图渲染与方案可视化", "植物配置方案自动生成", "CAD施工图基础绘制", "工程量清单与预算计算"], notReplacing: ["场地踏勘与空间感知——得亲自去现场", "与甲方沟通设计意图的反复博弈"], demandTrend: "房地产下行直接冲击园林行业，传统市政绑定的园林公司大面积裁员。生态修复和乡村振兴有政策支撑但预算紧。行业正在洗牌。", directions: ["转向生态修复和环境咨询方向", "学会用AI出图提升效率，降低对画图员岗位的依赖", "往文旅和乡村景观方向靠，跟政策走"], summary: "地产黄金时代结束后园林行业在阵痛期，短期不乐观，但生态方向有长期机会。" },
+    { id: "food-science-engineering", name: "食品科学与工程", category: "engineering", aiExposure: 4.5, radar: { automationRisk: 4, demandGrowth: 5, salaryPotential: 4, entryBarrier: 4, aiCollaboration: 5 }, replacing: ["食品检测报告生成与数据录入", "配方优化的初步参数计算", "HACCP文档编写与合规检查", "营养标签计算"], notReplacing: ["感官评价和风味调配——人的味觉判断不可替代", "食品安全现场审核与工厂管理"], demandTrend: "刚需行业，就业面广但起薪低。新消费品牌和功能性食品有增长，质量安全岗位需求稳定。顶级食品企业(玛氏、雀巢等)薪资尚可。", directions: ["往功能性食品和合成生物学方向深耕", "考食品安全相关证书，走质量管理路线", "关注预制菜和新消费品牌的研发岗"], summary: "饿不死但发不了财的专业，想要高薪得进外企或走研发深耕路线。" },
+    { id: "animal-science", name: "动物科学", category: "agriculture", aiExposure: 4.5, radar: { automationRisk: 4, demandGrowth: 4, salaryPotential: 4, entryBarrier: 4, aiCollaboration: 5 }, replacing: ["饲料配方计算与优化", "养殖环境数据监控与预警", "繁殖记录管理与遗传分析", "疫病风险预测模型"], notReplacing: ["大型养殖场的现场管理与应急处置", "动物行为的实地观察与福利评估"], demandTrend: "规模化养殖趋势下，大型牧业集团(牧原、温氏)持续招人，但工作环境在农场。饲料企业和动保企业是另一个出路。整体就业不难但生活质量是个问题。", directions: ["进大型牧业集团走管培生路线，晋升空间大", "往动物营养方向读研，进饲料企业研发部", "关注智慧牧业和精准养殖的技术岗位"], summary: "就业率其实不错，但大部分人接受不了养殖场的工作环境——想清楚再报。" },
+    { id: "aquaculture", name: "水产养殖学", category: "agriculture", aiExposure: 4.0, radar: { automationRisk: 3, demandGrowth: 4, salaryPotential: 3, entryBarrier: 4, aiCollaboration: 5 }, replacing: ["水质参数监测与自动调控", "投喂量计算与饲料方案优化", "病害图像初筛与用药建议", "养殖数据记录与产量分析"], notReplacing: ["养殖现场的经验判断——水产的事极度依赖实践", "新品种引进和养殖模式创新"], demandTrend: "水产是中国优势产业，但从业意愿低导致人才缺口。沿海城市和水产大省(广东、山东、福建)需求集中。工作条件艰苦是最大劝退因素。", directions: ["走水产种苗和繁殖技术方向，技术壁垒高", "关注工厂化循环水养殖(RAS)方向", "学水产品加工和贸易，往产业链下游走"], summary: "冷门但不缺工作，问题是大部分人不愿意去塘边——如果你能接受，竞争反而小。" },
+
+    // ===== 历史学 =====
+    { id: "history", name: "历史学", category: "history", aiExposure: 5.5, radar: { automationRisk: 5, demandGrowth: 2, salaryPotential: 3, entryBarrier: 3, aiCollaboration: 6 }, replacing: ["史料检索与文献综述生成", "历史事件时间线整理与可视化", "古文翻译与注释初稿", "考古报告数据录入与分类"], notReplacing: ["历史叙事的价值判断和观点输出——AI没有史观", "田野考古和文物鉴定的实物经验"], demandTrend: "纯历史学就业面极窄，主要出路是考公、教师、博物馆。文博文旅融合是新方向但岗位有限。AI能力在文献处理上已经很强了。", directions: ["考公是最现实的路径，历史学考公有优势", "往数字人文方向转，学数据可视化", "做历史类自媒体内容创作，市场有需求"], summary: "就业很难但考公有优势——如果不打算考公或读博，慎选。" },
+
+    // ===== 工学（续） =====
+    { id: "environmental-engineering", name: "环境工程", category: "engineering", aiExposure: 5.0, radar: { automationRisk: 4, demandGrowth: 4, salaryPotential: 4, entryBarrier: 5, aiCollaboration: 6 }, replacing: ["环评报告模板化内容生成", "污染物监测数据分析与报表", "工艺参数优化计算", "环保法规合规性检查"], notReplacing: ["污染现场调查与工程方案设计——得去现场", "与政府部门的环保审批沟通协调"], demandTrend: "环保督察常态化保证了基本需求，但行业利润薄、甲方多是政府项目回款慢。碳中和相关方向是增长点。环评市场被AI冲击明显。", directions: ["转向碳交易和碳核算方向，考碳排放管理师", "往环保设备和工程项目管理方向走", "学环境数据分析，做环境监测的智能化"], summary: "传统环评岗正在被AI替代，要么往碳方向转，要么做工程落地，别停在写报告层面。" },
+    { id: "materials-science", name: "材料科学与工程", category: "engineering", aiExposure: 5.5, radar: { automationRisk: 4, demandGrowth: 5, salaryPotential: 5, entryBarrier: 6, aiCollaboration: 7 }, replacing: ["材料性能数据库检索与对比", "实验数据拟合与建模", "文献综述与研究趋势分析", "材料成分配比初步优化"], notReplacing: ["新材料的创造性设计思路——灵感不能计算", "实验室的实际操作与异常处理"], demandTrend: "半导体材料、新能源材料(锂电/钙钛矿)需求旺盛，传统金属和高分子方向一般。读研是基本要求，本科就业面窄。AI在材料计算领域渗透快。", directions: ["瞄准半导体材料或新能源材料方向读研", "学材料计算和机器学习辅助材料设计", "进新能源头部企业(宁德时代、比亚迪)的材料研发部"], summary: "方向选对了前景很好，选错了就是天坑——半导体和新能源材料是正确答案，传统方向别碰。" },
+    { id: "surveying-mapping", name: "测绘工程", category: "engineering", aiExposure: 6.0, radar: { automationRisk: 6, demandGrowth: 3, salaryPotential: 4, entryBarrier: 5, aiCollaboration: 6 }, replacing: ["遥感影像自动解译与分类", "GIS数据处理与地图制作", "点云数据自动化处理", "测量数据平差计算"], notReplacing: ["复杂地形的现场测量作业", "测绘成果的质量审核与法律效力签章"], demandTrend: "传统测绘随基建放缓在萎缩，但无人机测绘、自动驾驶高精地图、卫星遥感是新增长点。AI对传统测绘内业岗冲击很大。", directions: ["转向无人机测绘和激光雷达数据处理", "学GIS开发，往空间数据分析方向走", "关注自动驾驶和智慧城市的高精地图岗位"], summary: "传统测绘在萎缩，但空间数据能力在自动驾驶和智慧城市领域值钱——关键是技能要升级。" },
+    { id: "mining-engineering", name: "采矿工程", category: "engineering", aiExposure: 4.0, radar: { automationRisk: 4, demandGrowth: 2, salaryPotential: 5, entryBarrier: 5, aiCollaboration: 4 }, replacing: ["矿体建模与储量计算", "采矿方案的初步设计与优化", "安全监测数据分析与预警", "地质数据三维可视化"], notReplacing: ["井下现场安全管理——人命关天的事不能远程", "复杂地质条件下的工程决策"], demandTrend: "传统煤矿在收缩，但锂矿、稀土等新能源矿产有增长。智慧矿山是趋势但推进慢。行业薪资不低但工作环境和地点是硬伤。", directions: ["转向新能源矿产(锂、钴、镍)开发方向", "学智慧矿山和矿山自动化技术", "往矿业咨询和矿产投资分析方向走"], summary: "薪资其实不差，但你得愿意去矿山——新能源矿产方向是目前最好的出路。" },
+    { id: "textile-engineering", name: "纺织工程", category: "engineering", aiExposure: 5.0, radar: { automationRisk: 5, demandGrowth: 2, salaryPotential: 3, entryBarrier: 3, aiCollaboration: 5 }, replacing: ["面料花型设计生成", "纺织工艺参数优化", "质检图像自动识别", "供应链订单排产计算"], notReplacing: ["面料手感和品质的人工鉴别", "纺织设备现场调试与故障排除"], demandTrend: "传统纺织产能过剩且在向东南亚转移。功能性纺织品(医用、军用、智能穿戴)和可持续时尚有增长，但岗位体量小。整体是夕阳方向。", directions: ["转向功能性纤维和智能纺织品研发", "学服装供应链管理，往品牌方走", "关注可持续时尚和环保材料方向"], summary: "传统纺织在中国已经是夕阳产业，除非做高端功能性方向，否则不建议报考。" },
+    { id: "transportation", name: "交通运输", category: "engineering", aiExposure: 5.5, radar: { automationRisk: 5, demandGrowth: 4, salaryPotential: 5, entryBarrier: 5, aiCollaboration: 6 }, replacing: ["交通流量数据分析与预测", "运输路线优化与调度排程", "交通规划方案的仿真模拟", "事故数据统计与归因分析"], notReplacing: ["复杂交通枢纽的运营管理决策", "交通政策的社会影响评估与公众沟通"], demandTrend: "轨道交通和智能交通持续建设，国企(铁路局、地铁公司、高速集团)是主要去向，稳定但涨薪慢。自动驾驶对行业有长期结构性影响。", directions: ["往智能交通系统(ITS)方向发展", "进铁路局或地铁公司走稳定路线", "学交通大数据分析，往科技公司的出行业务靠"], summary: "就业靠国企兜底，稳定但无惊喜——想要高薪就往智能交通和自动驾驶方向转。" },
+    { id: "aerospace-engineering", name: "航空航天工程", category: "engineering", aiExposure: 5.0, radar: { automationRisk: 3, demandGrowth: 7, salaryPotential: 7, entryBarrier: 8, aiCollaboration: 7 }, replacing: ["CFD仿真的前处理与后处理", "结构有限元分析的常规计算", "试验数据处理与报告生成", "零部件参数化设计"], notReplacing: ["航空器总体设计的系统性思维", "飞行试验和极端工况下的工程判断"], demandTrend: "军民融合+商业航天爆发，人才供不应求。航空航天院所(航天科技、中航工业)和商业航天公司(蓝箭、星际荣耀)都在抢人。门槛高但回报好。", directions: ["读研进航天院所走科研路线", "关注商业航天创业公司的工程岗", "学飞控或导航方向，通用性更强"], summary: "顶级工科专业，门槛高但前景好——中国航天正在黄金期，值得投入。" },
+    { id: "naval-architecture", name: "船舶与海洋工程", category: "engineering", aiExposure: 5.0, radar: { automationRisk: 4, demandGrowth: 5, salaryPotential: 5, entryBarrier: 6, aiCollaboration: 6 }, replacing: ["船体结构有限元分析", "水动力性能仿真计算", "船舶设计图纸的参数化建模", "建造进度数据跟踪与报表"], notReplacing: ["船舶总体设计的工程经验与权衡", "船厂现场建造管理与质量控制"], demandTrend: "中国已是全球第一造船国，LNG船和大型集装箱船订单饱满。军舰建造也在加速。行业周期性强，当前处于上行期。", directions: ["专注LNG船和新能源船舶方向", "学海洋工程装备(深海平台/海上风电)", "进中船集团体系，稳定且有技术积累"], summary: "中国造船业全球第一不是吹的，现在是入行好时机——但行业有周期，做好心理准备。" },
+    { id: "cyberspace-security", name: "网络空间安全", category: "engineering", aiExposure: 6.5, radar: { automationRisk: 4, demandGrowth: 8, salaryPotential: 7, entryBarrier: 7, aiCollaboration: 8 }, replacing: ["漏洞扫描与基础渗透测试", "安全日志分析与威胁告警", "恶意代码特征提取与分类", "合规审计检查清单执行"], notReplacing: ["高级持续性威胁(APT)的攻防对抗——攻防是人与人的博弈", "安全架构设计与企业安全策略制定"], demandTrend: "数据安全法+等保合规驱动需求爆发，各行业都在建安全团队。AI既是工具也制造了新的安全威胁，反而扩大了就业。", directions: ["深耕AI安全方向——这是未来最大增量", "考CISP/CISSP等认证提升市场价值", "往安全攻防(红队)方向走，技术天花板高"], summary: "少数AI越发展反而越需要人的专业——安全人才缺口还在扩大，值得投入。" },
+
+    // ===== 理学（续） =====
+    { id: "geography", name: "地理科学", category: "science", aiExposure: 5.0, radar: { automationRisk: 5, demandGrowth: 3, salaryPotential: 3, entryBarrier: 4, aiCollaboration: 6 }, replacing: ["地理信息数据处理与制图", "遥感影像解译", "气候数据统计分析", "区域规划基础数据整理"], notReplacing: ["野外考察与地理现象的实地观测", "区域发展政策的综合分析与判断"], demandTrend: "师范类地理教师需求稳定，非师范方向就业面很窄。GIS技术岗有需求但竞争激烈。考公可选自然资源局等部门。", directions: ["师范方向当地理老师是最稳路线", "学GIS和遥感技术，往技术岗转", "考公进自然资源或规划部门"], summary: "师范方向还行，非师范方向就业很受限——选这个专业基本就是奔着当老师去的。" },
+    { id: "marine-science", name: "海洋科学", category: "science", aiExposure: 4.5, radar: { automationRisk: 4, demandGrowth: 5, salaryPotential: 4, entryBarrier: 5, aiCollaboration: 5 }, replacing: ["海洋监测数据处理与可视化", "海洋气象模型的参数调优", "海水样品检测数据分析", "海洋环境评价报告撰写"], notReplacing: ["出海调查和深潜采样作业", "海洋生态系统的跨学科综合研究"], demandTrend: "海洋强国战略推动下科研投入增加，但产业化岗位有限。主要去向是海洋局、研究所、海洋工程公司。地域限制明显，集中在沿海城市。", directions: ["读研做海洋资源开发或海洋环境方向", "学海洋遥感和数据分析拓宽技能", "关注深海采矿和海上风电的交叉岗位"], summary: "国家重视但就业面窄，基本得读研——喜欢大海是不够的，得能接受长期出海。" },
+    { id: "psychology", name: "心理学", category: "science", aiExposure: 5.0, radar: { automationRisk: 4, demandGrowth: 6, salaryPotential: 5, entryBarrier: 5, aiCollaboration: 6 }, replacing: ["心理测评量表的自动评分", "咨询记录整理与初步分析", "心理健康科普内容生成", "用户行为数据的基础心理分析"], notReplacing: ["面对面心理咨询的共情和治疗关系——AI没有人格", "危机干预中的即时判断与情感支持"], demandTrend: "心理健康需求爆发但变现路径长。学校心理教师需求增长，企业EAP岗位增多。独立执业需要长期积累，入行初期收入低。", directions: ["读临床/咨询方向研究生，走专业咨询师路线", "进互联网公司做用户研究(UXR)——薪资高", "往组织心理学方向走，做人才测评和培训"], summary: "需求在涨但赚钱慢，用户研究是最快变现路径——纯做心理咨询得熬5年以上。" },
+    { id: "astronomy", name: "天文学", category: "science", aiExposure: 6.0, radar: { automationRisk: 4, demandGrowth: 3, salaryPotential: 4, entryBarrier: 8, aiCollaboration: 7 }, replacing: ["天文图像自动处理与天体识别", "光谱数据批量分析与分类", "轨道计算与天体力学模拟", "巡天数据的海量筛选"], notReplacing: ["天文现象的理论解释和新假说提出", "望远镜观测策略制定与数据质量判断"], demandTrend: "中国天文投入在增加(FAST/CSST)，但岗位极少。全国每年需求可能就几十人。转行路径窄但数理基础好，转金融/数据科学有优势。", directions: ["读博走科研路线——这条路很窄但纯粹", "利用数理功底转数据科学或量化金融", "做天文科普自媒体或科学传播"], summary: "极小众的纯学术专业，除非真的热爱且接受低薪科研——数理基础强可以转行当退路。" },
+    { id: "chemistry", name: "化学", category: "science", aiExposure: 5.5, radar: { automationRisk: 5, demandGrowth: 4, salaryPotential: 4, entryBarrier: 5, aiCollaboration: 7 }, replacing: ["文献检索与合成路线推荐", "分子性质预测与虚拟筛选", "实验数据处理与图表生成", "化合物结构解析辅助"], notReplacing: ["实验室的实际合成操作与异常处理", "新反应机理的发现与验证"], demandTrend: "纯化学就业面窄，但化工、制药、新材料、电池行业都需要化学背景。AI在药物发现和材料设计上加速明显。本科就业一般，读研后选择多。", directions: ["转向计算化学/AI制药方向，跟上趋势", "进新能源(电池/光伏)行业做材料研发", "读研选有机合成或分析化学，走制药CRO路线"], summary: "纯化学很难就业，但化学+X的交叉方向很多——关键是读研和选对应用方向。" },
+    { id: "ecology", name: "生态学", category: "science", aiExposure: 4.0, radar: { automationRisk: 3, demandGrowth: 4, salaryPotential: 4, entryBarrier: 6, aiCollaboration: 4 }, replacing: ["物种识别和分类的图像AI辅助", "生态数据的统计分析和建模", "环境监测数据的自动采集和预警"], notReplacing: ["野外调查和生态系统的实地观察", "环境影响评价中的综合判断", "生态修复方案的设计和实施监督"], demandTrend: "双碳政策推动了环保行业需求，但基层环保岗位薪资低。碳交易和ESG方向是新增长点但体量有限。学术路径竞争激烈，需要读博。", directions: ["碳交易和ESG方向是目前最有前景的出路", "环境咨询和环评方向需求稳定，考环评工程师", "如果做学术，生态学+大数据分析能力是优势"], summary: "生态学受益于双碳政策但改变不了一个事实：环保行业在中国依然是'重要但不赚钱'的领域。" },
+    { id: "atmospheric-science", name: "大气科学", category: "science", aiExposure: 5.5, radar: { automationRisk: 5, demandGrowth: 4, salaryPotential: 5, entryBarrier: 7, aiCollaboration: 6 }, replacing: ["天气预报模型的自动化运行和输出", "气象数据的清洗和统计分析", "常规气象服务报告的模板化生成"], notReplacing: ["极端天气事件的预判和预警决策", "气象灾害的应急响应和现场指挥", "气候模型的改进和新算法研发"], demandTrend: "气象局和相关事业单位是主要就业方向，编制有限但竞争不算激烈。AI天气预报(华为盘古气象)正在改变行业，懂AI的气象人才有增量需求。", directions: ["气象局+事业编是主流出路，稳定但收入一般", "AI气象方向是新增长点，学编程和机器学习", "航空气象和海洋气象是细分方向，需求小但竞争也小"], summary: "冷门到几乎不受AI就业冲击——不是因为AI做不了气象预测，而是因为这行本来就没多少人抢。" },
+
+    // ===== 医学（续） =====
+    { id: "preventive-medicine", name: "预防医学", category: "medicine", aiExposure: 5.0, radar: { automationRisk: 4, demandGrowth: 6, salaryPotential: 4, entryBarrier: 6, aiCollaboration: 6 }, replacing: ["流行病学数据统计分析", "疫情监测数据自动预警", "健康档案管理与人群筛查", "公共卫生报告起草"], notReplacing: ["现场流行病学调查——得去疫区", "公共卫生政策制定中的多方博弈"], demandTrend: "新冠后国家大幅扩充公卫体系，疾控中心编制增加。但薪资比临床低很多，社会地位也差一截。慢性病防控和健康管理是长期增长点。", directions: ["进疾控中心或卫健委体系，吃编制红利", "往流行病学和生物统计方向读研", "转健康管理和保险精算方向，薪资更高"], summary: "新冠后最大受益专业之一，编制岗扩招明显——图稳定的好选择，但别指望高薪。" },
+    { id: "medical-imaging", name: "医学影像学", category: "medicine", aiExposure: 7.0, radar: { automationRisk: 7, demandGrowth: 4, salaryPotential: 5, entryBarrier: 6, aiCollaboration: 8 }, replacing: ["CT/MRI图像的初步筛查与标注", "影像报告标准化内容生成", "病灶测量与量化分析", "影像前后对比与变化追踪"], notReplacing: ["复杂病例的影像综合诊断——AI误诊的后果太严重", "介入放射学的手术操作"], demandTrend: "AI影像诊断产品已大量落地，初级阅片工作被替代是确定趋势。但资深影像科医生反而因为要监督AI而更重要。介入方向不受影响。", directions: ["往介入放射学方向发展，手术技能AI替代不了", "学会用AI工具提升效率而不是被替代", "关注AI影像产品公司的医学顾问岗位"], summary: "AI冲击最大的医学专业之一——纯读片的饭碗在缩，介入方向才是安全的。" },
+    { id: "anesthesiology", name: "麻醉学", category: "medicine", aiExposure: 4.0, radar: { automationRisk: 3, demandGrowth: 7, salaryPotential: 6, entryBarrier: 7, aiCollaboration: 5 }, replacing: ["麻醉深度监测数据的自动分析", "术前评估问卷和风险评分计算", "药物剂量的初步计算建议", "麻醉记录单自动填写"], notReplacing: ["术中生命体征的实时判断和紧急处置——容错率为零", "困难气道的操作处理"], demandTrend: "麻醉医生全国缺口巨大(约30万)，舒适化医疗推动需求持续增长。工作强度大、风险高，但薪资在医生中属于中上。", directions: ["坚定走临床麻醉路线，缺口就是机会", "关注疼痛科方向，独立性更强", "往重症医学(ICU)方向发展，可选路径多"], summary: "严重供不应求的专业，就业完全不愁——缺点是压力大、夜班多，但回报配得上付出。" },
+    { id: "medical-laboratory", name: "医学检验技术", category: "medicine", aiExposure: 6.5, radar: { automationRisk: 6, demandGrowth: 4, salaryPotential: 4, entryBarrier: 5, aiCollaboration: 6 }, replacing: ["常规检验项目的自动化操作", "检验报告自动生成与审核", "细胞形态学的AI辅助识别", "质控数据分析与异常标记"], notReplacing: ["复杂标本的人工复检与疑难判断", "新检验方法的开发与验证"], demandTrend: "检验自动化和AI辅助判读持续推进，常规岗位需求在缩。分子诊断(PCR/基因检测)和质谱检验方向在增长。第三方检验机构(金域/迪安)是主要雇主。", directions: ["往分子诊断和基因检测方向转——增量最大", "学质谱技术(LC-MS)，临床需求在爆发", "进IVD(体外诊断)企业做产品应用或研发"], summary: "常规检验岗被自动化蚕食是确定趋势——往分子诊断和质谱方向走才有增量。" },
+    { id: "rehabilitation-therapy", name: "康复治疗学", category: "medicine", aiExposure: 3.5, radar: { automationRisk: 3, demandGrowth: 7, salaryPotential: 4, entryBarrier: 4, aiCollaboration: 5 }, replacing: ["康复评估量表的自动评分", "康复训练方案的模板生成", "治疗进度记录与数据追踪", "辅助器具适配参数计算"], notReplacing: ["手法治疗和一对一康复训练——必须有人在旁边", "患者心理支持和依从性管理"], demandTrend: "老龄化+运动康复意识提升，需求增长确定。但目前薪资偏低，社会认知度不够。三甲医院康复科和康复专科医院是主要去向。运动康复是新热点。", directions: ["往运动康复方向发展，服务运动员和健身人群", "考作业治疗师(OT)或言语治疗师(ST)，细分领域竞争小", "关注居家康复和社区康复的政策红利"], summary: "老龄化社会的刚需专业，需求增长确定——现在薪资低但长期看好，适合有耐心的人。" },
+
+    // ===== 文学（续） =====
+    { id: "japanese", name: "日语", category: "literature", aiExposure: 8.0, radar: { automationRisk: 8, demandGrowth: 3, salaryPotential: 5, entryBarrier: 5, aiCollaboration: 6 }, replacing: ["日常商务邮件和文档翻译", "字幕和本地化翻译", "日语教学中的语法讲解和纠错"], notReplacing: ["日企商务文化中的人际关系维护和谈判", "文学作品中的语境和美学翻译", "涉及日本政商关系的跨文化咨询"], demandTrend: "AI翻译质量已接近人工水平，纯翻译岗快速萎缩。日企在华业务缩减进一步压缩需求。少数高端同传和日本市场本地化运营岗仍有空间，但总量很小。", directions: ["别做纯翻译，往日本市场运营和跨境电商方向转", "考虑日语+技术的复合能力，做日企IT项目对接", "如果真爱日本文化，内容创作比翻译更有出路"], summary: "AI翻译把日语专业的核心卖点——翻译能力——彻底打成了通用工具。纯日语毕业生的处境比英语还难。" },
+    { id: "communication", name: "传播学", category: "literature", aiExposure: 7.5, radar: { automationRisk: 7, demandGrowth: 5, salaryPotential: 5, entryBarrier: 4, aiCollaboration: 7 }, replacing: ["舆情监测报告的数据收集和初步分析", "新闻稿和通稿的模板化撰写", "社交媒体数据的基础统计分析"], notReplacing: ["危机公关中的策略判断和即时决策", "深度调查报道的选题判断和人脉运营", "品牌叙事的创意策划和情感共鸣设计"], demandTrend: "传统媒体岗位持续萎缩。新媒体运营岗位数量大但薪资天花板低，且AI内容工具正在压缩初级运营的价值。有策略思维和数据分析能力的传播人才仍有需求。", directions: ["学数据分析，做数据驱动的传播策略而非纯内容生产", "往品牌战略和危机公关方向走，这需要判断力不是产出量", "掌握AI内容工具，用一个人的产能做三个人的活"], summary: "传播学的'写稿'部分正被AI吃掉，但'策略'部分依然需要人——问题是大部分毕业生只会写稿。" },
+    { id: "advertising", name: "广告学", category: "literature", aiExposure: 7.5, radar: { automationRisk: 7, demandGrowth: 4, salaryPotential: 5, entryBarrier: 4, aiCollaboration: 7 }, replacing: ["广告文案的批量生成和A/B测试版本", "广告投放数据的日常监控和报表", "素材的基础排版和尺寸适配"], notReplacing: ["品牌策略定位和消费者洞察", "大型整合营销活动的创意策划", "客户关系维护和提案演讲"], demandTrend: "效果广告越来越自动化，投放优化师正在被AI蚕食。品牌广告受经济下行影响预算缩减。整体就业不乐观，但顶尖创意人才始终稀缺。", directions: ["做创意策略而不是执行，AI能写一百条文案但不能决定方向", "学程序化广告和数据分析，理解AI投放系统的逻辑", "往内容营销和品牌咨询方向转型"], summary: "广告行业正在经历'中间层塌陷'——AI干掉了中等水平的执行，只有顶尖创意和底层技术两端有活路。" },
+    { id: "new-media", name: "网络与新媒体", category: "literature", aiExposure: 7.0, radar: { automationRisk: 7, demandGrowth: 6, salaryPotential: 5, entryBarrier: 3, aiCollaboration: 8 }, replacing: ["日常推文和短视频脚本的批量生产", "数据报表和粉丝画像分析", "评论区管理和基础用户互动"], notReplacing: ["爆款内容的选题嗅觉和节奏把控", "人设打造和粉丝社群的情感运营", "跨平台内容策略和商业化路径设计"], demandTrend: "岗位数量多但门槛极低，AI工具让一个人能管五个账号，企业正在缩减新媒体团队规模。能做出爆款的人永远稀缺，但大部分人做的是流水线工作。", directions: ["别当内容流水线工人，要做内容策略师和操盘手", "深耕一个垂直领域，建立个人IP比打工更有前途", "学会用AI工具做到一人团队，效率就是你的壁垒"], summary: "这个专业的悖论：行业需求看似旺盛，但AI让入行门槛归零，'谁都能做'意味着'做了也不值钱'。" },
+    { id: "french", name: "法语", category: "literature", aiExposure: 7.5, radar: { automationRisk: 8, demandGrowth: 3, salaryPotential: 5, entryBarrier: 6, aiCollaboration: 5 }, replacing: ["法语商务文件和技术文档翻译", "法语教学中的基础语法讲解", "法语新闻和资料的摘要整理"], notReplacing: ["法语区非洲的商务拓展和驻外管理", "涉及法律和外交的高端口译", "法语文学研究和跨文化学术交流"], demandTrend: "中国与法语区非洲合作是法语就业的主要增量，但AI翻译压缩了纯语言岗需求。驻外岗位有但条件艰苦、竞争者少。国内法语岗位非常有限。", directions: ["瞄准中非合作方向，学法语+国际贸易或工程管理", "往外交、国际组织方向考，法语是联合国工作语言", "如果不想驻外，法语的就业面极窄，慎重选择"], summary: "法语的价值越来越取决于你愿不愿意去非洲——不愿意的话，AI翻译正在让这个专业失去存在理由。" },
+    { id: "german", name: "德语", category: "literature", aiExposure: 7.5, radar: { automationRisk: 8, demandGrowth: 3, salaryPotential: 5, entryBarrier: 6, aiCollaboration: 5 }, replacing: ["德语技术文档和商务信函翻译", "德语教学中的基础语法和词汇训练", "德语资料的检索和信息提取"], notReplacing: ["德企在华业务的本地化管理和文化协调", "涉及工业标准和法规的专业口译", "德国留学咨询和学术合作中的深度沟通"], demandTrend: "德企在华业务量收缩，汽车行业转型冲击了最大的德语就业方向。AI翻译进一步压缩需求。德国留学中介需求小幅存在但体量有限。", directions: ["德语+汽车/机械工程是传统优势方向，但要关注电动化转型", "考虑德国留学后在当地就业，比回国就业面更宽", "纯德语翻译基本没前途，必须加一个硬技能"], summary: "德企缩减在华业务+AI翻译双重夹击，德语正从'有用的小语种'变成'越来越窄的小众方向'。" },
+
+    // ===== 法学（续） =====
+    { id: "political-science", name: "政治学与行政学", category: "law", aiExposure: 5.0, radar: { automationRisk: 4, demandGrowth: 3, salaryPotential: 4, entryBarrier: 5, aiCollaboration: 4 }, replacing: ["政策文件的初稿撰写和格式整理", "公共舆情的基础数据收集和分析", "政策法规的比较研究和资料整理"], notReplacing: ["政治环境分析和政策走向的判断", "政府关系维护和政策游说", "基层治理中的矛盾调解和群众工作"], demandTrend: "主要就业方向是考公，体制内岗位稳定但增长极慢。学术路径竞争激烈。企业端的政府关系岗有需求但不看专业对口。整体就业面窄。", directions: ["这个专业本质上就是考公专业，全力准备公务员考试", "如果不考公，往政策咨询或智库方向走需要读研", "学数据分析增加就业竞争力，纯文科出路太窄"], summary: "政治学的出路基本就是考公——考上了稳定，考不上就尴尬。AI对这个方向冲击不大，但就业本来就难。" },
+    { id: "social-work", name: "社会工作", category: "law", aiExposure: 3.5, radar: { automationRisk: 2, demandGrowth: 4, salaryPotential: 3, entryBarrier: 3, aiCollaboration: 3 }, replacing: ["社区服务数据的统计和报表", "政策信息的整理和宣传材料编写", "标准化问卷调查的分发和回收"], notReplacing: ["面对面的心理疏导和危机干预", "社区矛盾的实地调解和人际协调", "弱势群体的长期陪伴和个案管理"], demandTrend: "社会需求大但待遇极差，大部分岗位在社区和社会组织，月薪刚过温饱线。政策上在推社工体系建设但资金投入跟不上。AI冲击小但不是因为'重要'，而是因为'不值得自动化'。", directions: ["考社工证，往社区治理和民政系统方向考公", "如果不在乎收入、真心想做这行，做好长期低薪的心理准备", "转向心理咨询方向需要额外学习和认证"], summary: "AI替代不了社会工作者的面对面服务——但这个专业的真正问题不是AI，是钱太少。" },
+    { id: "international-politics", name: "国际政治", category: "law", aiExposure: 5.5, radar: { automationRisk: 5, demandGrowth: 3, salaryPotential: 5, entryBarrier: 6, aiCollaboration: 5 }, replacing: ["国际新闻和政策的日常监测和摘要", "各国政策对比的基础资料整理", "外文资料翻译和信息提取"], notReplacing: ["地缘政治风险的综合判断和预测", "国际谈判中的策略设计和文化敏感度", "对外关系中的人脉网络建设"], demandTrend: "就业面极窄，主要出路是考公（外交部、商务部）、智库、国际组织，或转行做国际新闻。名校+硕士是基本门槛。", directions: ["目标明确就考外交部、商务部，但竞争极其激烈", "往国际商务和跨国企业政府事务方向转更实际", "语言能力是基本功，至少精通一门外语"], summary: "听起来高大上但就业面极窄——不是外交部就是失业，中间选项很少。" },
+    { id: "ideological-political-edu", name: "思想政治教育", category: "law", aiExposure: 3.0, radar: { automationRisk: 2, demandGrowth: 4, salaryPotential: 4, entryBarrier: 4, aiCollaboration: 3 }, replacing: ["思政课程资料的整理和教案模板生成", "时政热点的信息搜集和简报制作", "标准化思政考核试题的生成"], notReplacing: ["课堂上的互动教学和价值引导", "学生心理辅导和思想动态把握", "党建和团建活动的组织和实施"], demandTrend: "政策刚需方向，所有高校和中学都必须配备思政教师。近年来思政教育地位提升，岗位需求稳定。但主要在体制内，薪资增长有限。", directions: ["考教师资格证，目标中学或高校思政教师岗位", "可以考辅导员岗位，高校辅导员需求持续存在", "考公务员也是核心出路，党务和宣传系统对口"], summary: "AI几乎动不了这个专业——不是因为技术壁垒高，而是因为这是政治任务，不可能让AI来做。" },
+
+    // ===== 管理学（续） =====
+    { id: "public-admin", name: "公共事业管理", category: "management", aiExposure: 4.5, radar: { automationRisk: 4, demandGrowth: 3, salaryPotential: 3, entryBarrier: 3, aiCollaboration: 4 }, replacing: ["公共服务数据的统计分析和报表", "政策执行的日常记录和文档管理", "通知、公告等行政文书的模板化撰写"], notReplacing: ["公共服务中的现场管理和应急协调", "社区和群众工作中的人际沟通", "公共项目的利益协调和资源分配"], demandTrend: "就业方向高度依赖考公和事业编，体制外几乎没有对口岗位。每年公务员考试竞争加剧，上岸率持续走低。专业名字好听但就业面极窄。", directions: ["核心出路是考公务员和事业编，认真准备考试", "体制外可以转向人力资源或行政管理岗位", "在校期间多考证（会计、人力资源等），拓宽就业面"], summary: "管理学中最尴尬的专业之一——学了'管理公共事业'，结果发现公共事业不归你管。出路就是考公。" },
+    { id: "public-admin-mgmt", name: "行政管理", category: "management", aiExposure: 5.0, radar: { automationRisk: 5, demandGrowth: 3, salaryPotential: 4, entryBarrier: 3, aiCollaboration: 5 }, replacing: ["日常行政流程的审批和跟踪", "会议记录、工作总结等文档撰写", "办公用品采购和资产管理的登记"], notReplacing: ["跨部门协调和内部关系处理", "企业文化建设和团队管理", "高管助理的综合判断和优先级管理"], demandTrend: "企业行政岗正在被AI办公工具压缩，前台、文员、行政助理岗位在快速减少。高级行政总监有需求但不看专业对口。考公依然是最稳出路。", directions: ["考公是主线，行政管理是考公万金油专业", "企业端往人力资源或办公室主任方向发展", "学好办公软件和AI工具，行政效率高的人比什么都不会的人值钱"], summary: "行政管理的实话：大部分毕业生做的工作根本不需要大学四年——AI让这个事实更加残酷了。" },
+    { id: "tourism-mgmt", name: "旅游管理", category: "management", aiExposure: 5.5, radar: { automationRisk: 5, demandGrowth: 4, salaryPotential: 3, entryBarrier: 3, aiCollaboration: 5 }, replacing: ["旅游行程的规划和推荐", "酒店和机票的预订和比价", "景区导览讲解的标准化内容"], notReplacing: ["高端定制旅行的个性化服务", "旅游目的地的危机管理和现场协调", "文旅项目的策划和在地文化挖掘"], demandTrend: "在线旅游平台+AI行程规划工具正在消灭传统旅行社。导游证含金量下降，低端团队游萎缩。高端定制游和文旅策划有小幅增长，但总体就业环境不好。", directions: ["往文旅策划和目的地运营方向走，别做传统旅行社", "学数字营销，旅游+内容创作比纯旅游管理有价值", "考虑酒店管理方向，国际连锁酒店管培生是相对体面的出路"], summary: "AI旅行助手让'帮人订机票酒店'变得毫无价值——旅游管理需要找到AI做不了的体验价值，但大部分课程还在教过时的东西。" },
+    { id: "logistics-mgmt", name: "物流管理", category: "management", aiExposure: 6.5, radar: { automationRisk: 7, demandGrowth: 5, salaryPotential: 5, entryBarrier: 4, aiCollaboration: 7 }, replacing: ["仓储库存的智能调度和优化", "运输路线的规划和成本计算", "订单处理和物流单据的自动生成"], notReplacing: ["供应链突发事件的应急决策", "大客户的物流解决方案设计和商务谈判", "跨境物流中的海关和政策合规"], demandTrend: "物流自动化和智能仓储加速渗透，传统仓管和调度岗位快速被替代。但供应链管理人才需求上升，特别是跨境电商物流方向。两极分化严重。", directions: ["往供应链管理方向升级，学数据分析和系统优化", "跨境物流是增量方向，学外贸+物流更有竞争力", "了解智能仓储和自动化设备，做物流科技而非传统物流"], summary: "AI正在让物流变成'无人'行业——还需要人的部分是供应链策略和客户服务，不是搬箱子和填单子。" },
+    { id: "ecommerce", name: "电子商务", category: "management", aiExposure: 7.0, radar: { automationRisk: 7, demandGrowth: 5, salaryPotential: 5, entryBarrier: 3, aiCollaboration: 8 }, replacing: ["商品详情页文案和主图的批量生成", "客服聊天机器人的标准化应答", "店铺数据的日常监控和报表生成"], notReplacing: ["爆款选品的市场嗅觉和趋势判断", "直播带货中的临场表现和人设运营", "平台规则变化下的运营策略调整"], demandTrend: "国内电商已经是红海，AI工具让开店门槛更低，竞争更激烈。传统电商运营岗薪资天花板低。跨境电商和直播电商是仅存的增长方向。", directions: ["跨境电商方向还有增量，学好英语或小语种", "直播电商需要个人魅力和销售能力，不是所有人适合", "学AI工具提升效率，用技术做出差异化"], summary: "电子商务专业的尴尬：行业确实很大，但做的事情AI越来越能做，而且不需要这个专业也能入行。" },
+    { id: "hr-mgmt", name: "人力资源管理", category: "management", aiExposure: 6.0, radar: { automationRisk: 6, demandGrowth: 4, salaryPotential: 5, entryBarrier: 4, aiCollaboration: 6 }, replacing: ["简历筛选和初步候选人匹配", "薪酬核算和考勤统计", "员工入离职手续的流程化处理"], notReplacing: ["面试中的综合判断和文化适配评估", "组织架构调整和人才发展战略", "劳动纠纷处理和员工关系维护"], demandTrend: "事务性HR岗位正在被AI和SaaS系统取代。招聘、薪酬模块自动化程度最高。HRBP和组织发展方向需求稳定但要求高。整体岗位在缩减但不会消失。", directions: ["往HRBP方向走，做业务伙伴而不是事务性HR", "学劳动法，劳动关系方向需要专业判断力", "掌握HR SaaS工具和数据分析，做数字化HR"], summary: "HR的'算工资、筛简历'部分AI全能做——未来的HR必须是能做组织诊断和人才战略的人，不是发工资条的人。" },
+
+    // ===== 艺术学（续） =====
+    { id: "env-design", name: "环境设计", category: "art", aiExposure: 6.5, radar: { automationRisk: 6, demandGrowth: 3, salaryPotential: 5, entryBarrier: 5, aiCollaboration: 7 }, replacing: ["效果图和3D渲染的快速生成", "标准化空间布局的方案推荐", "材料选择和成本估算的初步方案"], notReplacing: ["现场勘查和空间体验的直觉判断", "客户沟通中的需求理解和审美引导", "施工现场的问题协调和方案调整"], demandTrend: "房地产下行直接冲击了最大的就业方向——室内设计和景观设计。AI渲染工具进一步压缩了效果图制作岗的需求。存量房改造和商业空间设计是残存的增长点。", directions: ["别做纯效果图，往空间策划和体验设计方向走", "商业空间设计比住宅设计更抗周期", "学会用AI渲染工具提升效率，但核心能力是现场和客户管理"], summary: "房地产暴雷+AI渲染双杀——环境设计的黄金时代已经过去，现在拼的是项目管理能力而不是画图能力。" },
+    { id: "product-design", name: "产品设计", category: "art", aiExposure: 6.5, radar: { automationRisk: 6, demandGrowth: 5, salaryPotential: 6, entryBarrier: 5, aiCollaboration: 7 }, replacing: ["产品外观方案的快速概念生成", "产品说明书和包装的平面设计", "用户调研数据的基础分析和可视化"], notReplacing: ["产品的功能创新和交互体验设计", "材料工艺的选择和量产可行性判断", "品牌语言和产品线的整体策略规划"], demandTrend: "消费品行业对产品设计需求稳定，智能硬件和新消费品牌是增长方向。但AI设计工具降低了概念阶段的人力需求。懂工程和供应链的设计师比纯造型设计师更有价值。", directions: ["学CMF（色彩、材料、工艺），这是AI做不了的硬知识", "往用户体验和交互设计方向拓展，不要只做外观", "了解供应链和制造流程，能落地的设计比好看的效果图值钱"], summary: "AI能生成一千个概念图，但不知道哪个能量产——产品设计师的价值正在从'画得好'转向'做得出来'。" },
+    { id: "music-performance", name: "音乐表演", category: "art", aiExposure: 3.5, radar: { automationRisk: 2, demandGrowth: 3, salaryPotential: 4, entryBarrier: 7, aiCollaboration: 3 }, replacing: ["伴奏音轨的生成和编排", "基础音乐教学中的视唱练耳训练", "商业背景音乐的创作和编曲"], notReplacing: ["现场演出的即兴表现力和情感传递", "音乐教学中的个性化指导和示范", "高端演出的艺术诠释和舞台魅力"], demandTrend: "AI冲击不大，因为现场表演的价值在于'人在场'。但音乐行业本身就就业困难，大部分毕业生做音乐老师或转行。线上音乐教育内卷严重，线下培训机构洗牌。", directions: ["音乐教学是最稳定的出路，考教师资格证进学校", "如果走演出路线，建立个人品牌比进团更重要", "学音乐制作和音频技术，增加就业面"], summary: "AI不会取代在舞台上演奏的人——但这个专业的真正问题不是AI，是从来就不好就业。" },
+    { id: "drama-film-lit", name: "戏剧影视文学", category: "art", aiExposure: 7.0, radar: { automationRisk: 7, demandGrowth: 4, salaryPotential: 5, entryBarrier: 5, aiCollaboration: 7 }, replacing: ["剧本大纲和分场大纲的生成", "台词润色和对白的风格化改写", "IP改编的基础故事线梳理"], notReplacing: ["原创故事的核心创意和人物塑造", "导演沟通中的剧本调整和现场改稿", "对社会情绪和观众心理的精准把握"], demandTrend: "影视行业寒冬未过，编剧就业市场极度萎缩。AI编剧工具的成熟让制片方更倾向于用AI生成初稿、人工修改。新人编剧议价能力极低。", directions: ["短剧和微短剧是目前最大的增量市场，学快节奏叙事", "学会用AI辅助写作提升产出效率，而不是抵触", "建立个人作品集比学历重要，拍短片、写网文都算"], summary: "影视寒冬+AI编剧夹击——这个专业的毕业生大部分不会从事编剧工作，这是残酷的现实。" },
+    { id: "broadcasting-directing", name: "广播电视编导", category: "art", aiExposure: 6.5, radar: { automationRisk: 6, demandGrowth: 3, salaryPotential: 4, entryBarrier: 4, aiCollaboration: 7 }, replacing: ["视频粗剪和基础剪辑的自动化", "字幕生成和多语言翻译", "节目脚本的模板化撰写"], notReplacing: ["纪录片和深度内容的叙事结构设计", "拍摄现场的导演调度和即时决策", "内容选题的社会洞察和审美判断"], demandTrend: "传统广电就业持续萎缩，卫视和地方台大量裁员。短视频和自媒体创造了大量低薪内容生产岗。有导演能力和叙事能力的人始终稀缺，但纯剪辑和拍摄执行岗正在被AI压缩。", directions: ["短视频导演和内容创作者是最大的市场，但需要个人品牌", "学AI视频工具（Runway、Sora等），做AI增强型创作者", "往商业视频和企业宣传片方向走比进电视台现实"], summary: "广电编导的'电视台梦'已经碎了——短视频时代要的是能快速产出高质量内容的人，不是科班出身的人。" },
+    { id: "photography", name: "摄影", category: "art", aiExposure: 7.0, radar: { automationRisk: 7, demandGrowth: 3, salaryPotential: 4, entryBarrier: 4, aiCollaboration: 6 }, replacing: ["产品摄影和证件照的标准化拍摄", "照片的后期修图和批量处理", "图库素材的AI生成替代实拍"], notReplacing: ["纪实摄影和新闻摄影的现场判断", "商业摄影中的创意构思和布光设计", "人像摄影中与被摄者的互动和情绪引导"], demandTrend: "AI图像生成正在快速替代商业素材摄影。证件照和产品图已经可以AI生成。婚纱摄影和纪实摄影因为需要'在场'暂时安全，但市场也在萎缩。", directions: ["往视频方向转，纯图片的市场在缩小", "做高端商业摄影，客户买的是创意和审美，不是按快门", "建立个人品牌和作品集，靠口碑获客比靠平台接单更可持续"], summary: "AI能生成照片了——摄影师的价值从'拍到'变成'拍好'，但大部分摄影工作只需要'拍到'就行。" },
+    { id: "fashion-design", name: "服装与服饰设计", category: "art", aiExposure: 6.0, radar: { automationRisk: 5, demandGrowth: 4, salaryPotential: 5, entryBarrier: 5, aiCollaboration: 6 }, replacing: ["服装款式图的快速AI生成和变体", "面料花型和印花图案的AI设计", "流行趋势报告的自动化收集和分析"], notReplacing: ["面料手感和穿着体验的实物判断", "打版和缝制工艺的实操技能", "品牌风格定位和系列策划的整体思维"], demandTrend: "快时尚退潮、消费降级影响服装行业整体就业。AI设计工具降低了款式设计环节的人力需求。但供应链管理、面料开发和独立设计师品牌方向仍有空间。", directions: ["学供应链和面料开发，懂工厂比只会画效果图实用", "独立设计师路线需要极强的个人品牌能力和资金", "往运动服饰和功能性服装方向走，增长好于时装"], summary: "AI能画款式图了，但不能判断面料手感和版型穿着感——服装设计的价值在工艺和供应链，不在画图。" },
+    { id: "arts-crafts", name: "工艺美术", category: "art", aiExposure: 4.0, radar: { automationRisk: 3, demandGrowth: 2, salaryPotential: 3, entryBarrier: 5, aiCollaboration: 3 }, replacing: ["传统纹样的数字化复制和变体生成", "工艺品设计的概念草图AI辅助", "工艺美术史料的整理和检索"], notReplacing: ["手工制作的技艺和材料处理", "传统工艺的文化传承和创新融合", "工艺品的材料特性判断和质量把控"], demandTrend: "极度小众的方向，就业市场体量很小。非遗传承有政策扶持但商业化困难。文创产品设计是较新的出路但竞争激烈。大部分毕业生转行做平面设计或其他视觉方向。", directions: ["文创产品开发是最现实的商业化方向", "结合非遗传承争取政策扶持和项目资金", "实话说大部分人最终转行，早做心理准备"], summary: "AI取代不了手艺人——但手艺人在中国本来就很难靠手艺吃饱饭，这是比AI更大的问题。" },
+
+    // ===== 经济学（续） =====
+    { id: "public-finance", name: "财政学", category: "economics", aiExposure: 5.0, radar: { automationRisk: 5, demandGrowth: 4, salaryPotential: 5, entryBarrier: 5, aiCollaboration: 5 }, replacing: ["财政数据的统计分析和报表生成", "预算编制的模板化填报", "财政政策的基础资料整理和对比分析"], notReplacing: ["财政预算的优先级判断和政治博弈", "地方政府债务风险的综合评估", "税收政策对经济影响的战略分析"], demandTrend: "主要就业在财政局、税务局等体制内，岗位稳定但增长缓慢。银行和证券公司也招但不限于此专业。", directions: ["考公务员进财政系统或税务系统是最对口的出路", "银行和证券公司也认可，但竞争面广", "学注册会计师或税务师增加就业砝码"], summary: "财政学本质是个考公专业——体制内稳定但天花板明确，体制外不如学金融。" },
+    { id: "taxation", name: "税收学", category: "economics", aiExposure: 6.0, radar: { automationRisk: 6, demandGrowth: 4, salaryPotential: 5, entryBarrier: 5, aiCollaboration: 6 }, replacing: ["纳税申报和税务核算的自动化处理", "发票管理和税务台账的数据录入", "标准税务问题的自动问答和政策检索"], notReplacing: ["复杂税务筹划和跨境税务架构设计", "税务稽查中的争议处理和沟通谈判", "税收政策变化对企业影响的前瞻判断"], demandTrend: "金税四期等系统让基础税务工作高度自动化，初级税务岗正在被压缩。但税务筹划和国际税务方向需求稳定，企业出海带来的跨境税务需求增长。", directions: ["考注册税务师，做税务筹划而不是报税", "跨境税务方向是增量，学国际税收和转让定价", "税务+法律的复合背景比纯税务更有竞争力"], summary: "报税这种事AI做得比人好——税收学的价值在'筹划'不在'核算'，但大部分毕业生一开始都只能做核算。" },
+    { id: "insurance", name: "保险学", category: "economics", aiExposure: 6.5, radar: { automationRisk: 7, demandGrowth: 4, salaryPotential: 5, entryBarrier: 4, aiCollaboration: 6 }, replacing: ["保单的自动核保和风险评估", "理赔材料的智能审核和定损", "客户需求的标准化保险方案推荐"], notReplacing: ["高净值客户的保险规划和财富传承咨询", "复杂理赔案件的调查和谈判", "保险产品的创新设计和精算定价"], demandTrend: "保险代理人模式正在被互联网保险和AI核保颠覆，传统保险销售岗大规模裁撤。但精算、风控和高端财富管理方向仍有需求。行业转型期阵痛明显。", directions: ["考精算师是最硬的出路，但难度极高", "往保险科技方向走，理解AI核保和智能理赔系统", "高端客户的保险规划需要综合金融知识，不是卖保单"], summary: "保险行业正在'去人化'——AI核保+互联网销售正在消灭百万保险代理人大军，能留下的是精算师和高端顾问。" }
+  ]
+};
+
+// ===== CHINA 5-YEAR ADJUSTMENT =====
+// 基于中美差异对AI暴露度的修正：体制内缓冲、监管延迟、产业结构、AI工具普及速度
+const CHINA_ADJ = {
+  "cs":               { mod: -0.5, reason: "国内互联网AI采纳快，但大量IT岗在体制内和国企，整体冲击节奏慢于硅谷" },
+  "law":              { mod: -1.5, reason: "司法体系保守，体制内法务AI渗透极慢，律所端也受监管约束" },
+  "finance":          { mod: -1.0, reason: "金融监管严格，国有银行体系AI落地节奏远慢于美国市场化金融机构" },
+  "clinical-med":     { mod: -0.5, reason: "公立医院AI审批流程长，AI辅助诊断短期推广受限" },
+  "visual-design":    { mod: 0, reason: "国内AI设计工具普及快，设计外包市场已受明显冲击，与美国趋势一致" },
+  "accounting":       { mod: -1.0, reason: "大量会计岗在体制内和国企，AI财务软件推广受组织惯性拖累" },
+  "journalism":       { mod: +0.5, reason: "国内AI内容生成工具普及极快，自媒体生态加速了内容自动化，冲击比美国更快" },
+  "math":             { mod: 0, reason: "基础学科，中美差异不大" },
+  "software-eng":     { mod: -0.5, reason: "同计算机科学，体制内和传统企业开发岗受冲击较慢" },
+  "ai":               { mod: 0, reason: "全球化竞争领域，中国AI产业发展速度与美国接近" },
+  "data-science":     { mod: -0.5, reason: "部分数据岗在传统企业和体制内，AI工具渗透较慢" },
+  "ee":               { mod: -1.0, reason: "国产替代政策+新能源产业推动就业，大量岗位在国企和制造业，体制缓冲强" },
+  "telecom":          { mod: -1.0, reason: "华为、中兴及三大运营商主导，体制化程度高，AI落地节奏保守" },
+  "electrical":       { mod: -1.0, reason: "电力央企+新能源国企主导，体制内缓冲强，新能源需求对冲AI冲击" },
+  "mechanical":       { mod: -0.5, reason: "中国制造业体量大，工程师需求基数高，且大量岗位在现场" },
+  "automation":       { mod: -0.5, reason: "智能制造政策推动需求增长，制造业现场岗位AI渗透慢" },
+  "civil":            { mod: -0.5, reason: "基建行业体制化程度高，现场施工管理AI难以替代" },
+  "architecture":     { mod: 0, reason: "房地产下行+AI双重冲击，中国情况与全球趋势一致" },
+  "biomedical":       { mod: -0.5, reason: "医疗器械监管严格，AI医疗产品审批周期长" },
+  "vehicle":          { mod: -0.5, reason: "新能源汽车产业政策红利，中国车企扩张创造大量岗位" },
+  "chemical-eng":     { mod: -0.5, reason: "化工行业国企占比高，现场操作岗位AI渗透慢" },
+  "physics":          { mod: 0, reason: "基础学科，就业主要靠转行，中美差异不大" },
+  "statistics":       { mod: 0, reason: "基础学科，中美差异不大" },
+  "biotech":          { mod: -0.5, reason: "生物医药监管严格，AI药物研发审批流程长" },
+  "applied-chem":     { mod: 0, reason: "已经是低暴露方向，实验操作为主，中美差异小" },
+  "economics":        { mod: -0.5, reason: "大量毕业生进体制内，体制内经济分析岗AI渗透慢" },
+  "international-trade": { mod: 0, reason: "跨境电商加速AI渗透，但贸易保护主义也创造新的人工岗位，正负抵消" },
+  "financial-eng":    { mod: -0.5, reason: "中国量化行业监管更严，高频交易限制多，AI落地比美国慢" },
+  "business-admin":   { mod: -0.5, reason: "中国企业管理关系导向重，管理决策AI渗透慢于欧美" },
+  "marketing":        { mod: 0, reason: "国内营销自动化和AI内容工具普及快，与美国趋势一致" },
+  "info-management":  { mod: -0.5, reason: "大量岗位在体制内IT部门，信息化改造节奏保守" },
+  "big-data-mgmt":    { mod: -0.5, reason: "数据安全监管严格，企业数据使用受限，AI数据工具落地受约束" },
+  "dentistry":        { mod: 0, reason: "手术操作为主，已经极低暴露，中美差异不大" },
+  "pharmacy":         { mod: -0.5, reason: "药品监管严格，AI药物研发在中国审批流程更长" },
+  "nursing":          { mod: 0, reason: "已经低暴露，护理需求刚性，中美差异主要在薪资而非AI冲击" },
+  "tcm":              { mod: -0.5, reason: "国家政策保护+中医诊疗独特性，AI渗透空间本就有限" },
+  "sociology":        { mod: -0.5, reason: "体制内研究为主，AI工具在社科领域推广慢" },
+  "chinese-lit":      { mod: +0.5, reason: "国内AI写作工具成熟度高，内容平台自动化程度高，冲击比美国更快" },
+  "english":          { mod: +0.5, reason: "国内AI翻译工具成熟度极高，翻译市场萎缩速度比美国更快" },
+  "animation":        { mod: 0, reason: "全球化行业，AI动画工具渗透速度中美接近" },
+  "digital-media":    { mod: 0, reason: "全球化行业，数字内容创作工具中美差异不大" },
+
+  // 教育学
+  "preschool-education":      { mod: 0.5,  reason: "学龄前儿童数量持续减少，学前教育行业竞争加剧" },
+  "physical-education":       { mod: -0.5, reason: "体育中考权重提升，学校体育老师需求增加" },
+  "special-education":        { mod: -0.5, reason: "融合教育政策推进，特教师资缺口大" },
+  "educational-technology":   { mod: 0,    reason: "AI+教育在中国发展快，但传统电教岗同步萎缩，正负抵消" },
+
+  // 农学
+  "agronomy":                 { mod: -0.5, reason: "粮食安全国家战略，种业振兴政策支撑需求" },
+  "veterinary-medicine":      { mod: -1.0, reason: "宠物经济爆发，宠物医生严重短缺" },
+  "landscape-architecture":   { mod: 0.5,  reason: "房地产下行直接冲击园林行业，比全球更快" },
+  "food-science-engineering": { mod: -0.3, reason: "食品安全监管趋严，质量岗需求稳定" },
+  "animal-science":           { mod: -0.5, reason: "规模化养殖扩张，大型牧企持续招人" },
+  "aquaculture":              { mod: -0.5, reason: "中国水产养殖全球第一，产业基础扎实" },
+
+  // 历史学
+  "history":                  { mod: 0.3,  reason: "就业面极窄，文科考公竞争加剧" },
+
+  // 工学（续）
+  "environmental-engineering":{ mod: -0.3, reason: "环保督察常态化保底，碳中和带来增量" },
+  "materials-science":        { mod: -0.5, reason: "新能源产业链爆发拉动材料需求" },
+  "surveying-mapping":        { mod: 0.3,  reason: "基建增速放缓，传统测绘需求减少" },
+  "mining-engineering":       { mod: -0.3, reason: "新能源矿产开发需求增长" },
+  "textile-engineering":      { mod: 0.5,  reason: "产业结构持续调整，传统纺织就业岗位有所收缩" },
+  "transportation":           { mod: -0.5, reason: "轨道交通持续建设，国企岗位稳定" },
+  "aerospace-engineering":    { mod: -1.0, reason: "军民融合+商业航天爆发，人才严重供不应求" },
+  "naval-architecture":       { mod: -0.5, reason: "中国造船业全球第一，订单饱满" },
+  "cyberspace-security":      { mod: -0.5, reason: "数据安全法+等保合规驱动安全岗位爆发" },
+
+  // 理学（续）
+  "geography":                { mod: 0,    reason: "师范方向需求稳定，非师范方向受限，中美差异不大" },
+  "marine-science":           { mod: -0.3, reason: "海洋强国战略增加科研投入" },
+  "psychology":               { mod: 0.3,  reason: "心理咨询师执业体系不成熟，变现路径比美国更长" },
+  "astronomy":                { mod: -0.3, reason: "FAST和CSST等大科学装置增加了科研岗位需求" },
+  "chemistry":                { mod: -0.3, reason: "新能源和制药产业拉动化学人才需求" },
+  "ecology":                  { mod: -0.5, reason: "双碳政策创造需求缓冲，大量岗位在政府和事业单位" },
+  "atmospheric-science":      { mod: -0.5, reason: "气象局体制内为主，AI气象应用落地需要审批周期" },
+
+  // 医学（续）
+  "preventive-medicine":      { mod: -0.5, reason: "后疫情时代公卫体系扩编，编制岗位增加" },
+  "medical-imaging":          { mod: 0.3,  reason: "中国AI影像产品落地快，替代效应比美国更明显" },
+  "anesthesiology":           { mod: -1.0, reason: "全国麻醉医生缺口约30万，严重供不应求" },
+  "medical-laboratory":       { mod: 0,    reason: "自动化替代与分子诊断增长基本对冲" },
+  "rehabilitation-therapy":   { mod: -0.5, reason: "老龄化加速+康复纳入医保推动需求增长" },
+
+  // 文学（续）
+  "japanese":                 { mod: 0.5,  reason: "国内AI翻译对日语支持成熟，日企在华收缩加剧冲击" },
+  "communication":            { mod: 0.5,  reason: "国内自媒体生态和AI内容工具普及速度快，传播岗被压缩更快" },
+  "advertising":              { mod: 0,    reason: "广告行业全球化程度高，AI冲击中美趋势一致" },
+  "new-media":                { mod: 0.5,  reason: "中国新媒体生态AI工具渗透极快，一人运营多账号已成常态" },
+  "french":                   { mod: -0.5, reason: "中非合作创造法语需求缓冲，驻外岗位AI暂时无法替代" },
+  "german":                   { mod: 0,    reason: "德企在华收缩趋势明确，AI翻译冲击与全球一致" },
+
+  // 法学（续）
+  "political-science":        { mod: -1.0, reason: "体制内为主要就业方向，AI在政府部门渗透极慢" },
+  "social-work":              { mod: 0,    reason: "已经是极低暴露方向，中美差异主要在薪资而非AI冲击" },
+  "international-politics":   { mod: -0.5, reason: "就业以体制内和智库为主，AI渗透节奏保守" },
+  "ideological-political-edu":{ mod: -0.5, reason: "政治任务属性决定AI不可能替代，中国特色方向" },
+
+  // 管理学（续）
+  "public-admin":             { mod: -0.5, reason: "就业高度依赖体制内，事业单位AI采纳节奏极慢" },
+  "public-admin-mgmt":        { mod: -0.5, reason: "体制内行政岗位AI渗透慢，但企业行政岗在加速自动化" },
+  "tourism-mgmt":             { mod: 0,    reason: "国内在线旅游平台和AI行程工具渗透速度与美国接近" },
+  "logistics-mgmt":           { mod: -0.5, reason: "国内物流自动化领先但大量物流岗在中小企业，缓冲较强" },
+  "ecommerce":                { mod: 0.5,  reason: "中国电商AI工具（AI客服、AI文案、AI投放）渗透速度全球领先" },
+  "hr-mgmt":                  { mod: -0.5, reason: "国企和体制内HR岗位受组织惯性保护，AI渗透较慢" },
+
+  // 艺术学（续）
+  "env-design":               { mod: 0,    reason: "房地产下行和AI渲染双重冲击与全球趋势一致" },
+  "product-design":           { mod: 0,    reason: "消费品设计全球化竞争，AI工具渗透中美接近" },
+  "music-performance":        { mod: 0,    reason: "现场表演为主，AI冲击本就有限，中美差异不大" },
+  "drama-film-lit":           { mod: 0.5,  reason: "国内短剧行业爆发加速了AI编剧工具的应用，冲击比好莱坞更快" },
+  "broadcasting-directing":   { mod: 0,    reason: "短视频行业AI工具渗透全球同步" },
+  "photography":              { mod: 0,    reason: "AI图像生成对商业摄影的冲击全球同步" },
+  "fashion-design":           { mod: 0,    reason: "服装行业全球化，AI设计工具渗透中美接近" },
+  "arts-crafts":              { mod: -0.5, reason: "非遗保护政策+手工制作属性，AI渗透空间本就有限" },
+
+  // 经济学（续）
+  "public-finance":           { mod: -1.0, reason: "财政系统体制化程度极高，AI在政府财政部门渗透极慢" },
+  "taxation":                 { mod: -0.5, reason: "金税系统虽然自动化程度高，但税务局岗位受体制保护" },
+  "insurance":                { mod: -0.5, reason: "保险监管严格，国有保险公司AI转型节奏慢于美国" }
+};
+
+const EMPLOYMENT = {
+  "cs": { hotCities: ["北京", "深圳", "杭州"], hotIndustries: ["互联网平台", "人工智能", "金融科技"], hotJobs: ["后端开发工程师", "算法工程师", "全栈开发工程师"], avgSalary: "12-20k", topEmployers: ["字节跳动", "腾讯", "华为"] },
+  "law": { hotCities: ["北京", "上海", "广州"], hotIndustries: ["律师事务所", "企业法务", "政府机关"], hotJobs: ["律师助理", "法务专员", "合规专员"], avgSalary: "6-10k", topEmployers: ["金杜律师事务所", "中伦律师事务所", "国企法务部"] },
+  "finance": { hotCities: ["上海", "北京", "深圳"], hotIndustries: ["证券基金", "银行", "保险"], hotJobs: ["投资银行分析师", "风控专员", "理财经理"], avgSalary: "8-15k", topEmployers: ["中金公司", "招商银行", "中信证券"] },
+  "clinical-med": { hotCities: ["北京", "上海", "广州"], hotIndustries: ["公立医院", "民营医疗", "医药企业"], hotJobs: ["住院医师", "临床研究医生", "医学顾问"], avgSalary: "规培期3-5k，入编后8k+", topEmployers: ["三甲医院", "和睦家医疗", "药明康德"] },
+  "visual-design": { hotCities: ["上海", "深圳", "杭州"], hotIndustries: ["品牌设计", "电商", "广告传媒"], hotJobs: ["平面设计师", "UI设计师", "品牌视觉设计师"], avgSalary: "6-10k", topEmployers: ["奥美广告", "蚂蚁集团", "网易"] },
+  "accounting": { hotCities: ["上海", "北京", "深圳"], hotIndustries: ["会计师事务所", "企业财务", "金融机构"], hotJobs: ["审计助理", "财务专员", "税务专员"], avgSalary: "6-9k", topEmployers: ["普华永道", "德勤", "国有银行"] },
+  "journalism": { hotCities: ["北京", "上海", "杭州"], hotIndustries: ["新媒体运营", "短视频平台", "公关传播"], hotJobs: ["新媒体运营", "内容编辑", "短视频编导"], avgSalary: "5-9k", topEmployers: ["字节跳动", "央视新媒体", "蓝色光标"] },
+  "math": { hotCities: ["北京", "上海", "杭州"], hotIndustries: ["量化金融", "人工智能", "数据分析"], hotJobs: ["量化研究员", "数据分析师", "算法工程师"], avgSalary: "10-18k", topEmployers: ["幻方量化", "九坤投资", "华为"] },
+  "software-eng": { hotCities: ["北京", "深圳", "杭州"], hotIndustries: ["互联网", "企业软件", "云计算"], hotJobs: ["Java开发工程师", "前端开发工程师", "测试开发工程师"], avgSalary: "12-20k", topEmployers: ["阿里巴巴", "美团", "华为"] },
+  "ai": { hotCities: ["北京", "深圳", "杭州"], hotIndustries: ["大模型", "自动驾驶", "AI应用"], hotJobs: ["算法工程师", "大模型训练工程师", "AI产品经理"], avgSalary: "15-25k", topEmployers: ["百度", "商汤科技", "月之暗面"] },
+  "data-science": { hotCities: ["北京", "杭州", "上海"], hotIndustries: ["互联网", "金融科技", "电商"], hotJobs: ["数据分析师", "数据开发工程师", "商业智能分析师"], avgSalary: "10-18k", topEmployers: ["蚂蚁集团", "京东", "快手"] },
+  "ee": { hotCities: ["深圳", "上海", "成都"], hotIndustries: ["芯片半导体", "消费电子", "通信设备"], hotJobs: ["硬件工程师", "嵌入式开发工程师", "射频工程师"], avgSalary: "10-16k", topEmployers: ["华为", "中兴通讯", "海康威视"] },
+  "telecom": { hotCities: ["深圳", "北京", "成都"], hotIndustries: ["通信设备", "运营商", "物联网"], hotJobs: ["通信工程师", "网络优化工程师", "嵌入式软件工程师"], avgSalary: "9-15k", topEmployers: ["华为", "中国移动", "中兴通讯"] },
+  "electrical": { hotCities: ["北京", "上海", "武汉"], hotIndustries: ["电力系统", "新能源", "电气设备"], hotJobs: ["电气工程师", "电力系统运维", "新能源研发工程师"], avgSalary: "8-13k", topEmployers: ["国家电网", "南方电网", "宁德时代"] },
+  "mechanical": { hotCities: ["上海", "深圳", "苏州"], hotIndustries: ["汽车制造", "工业机器人", "精密制造"], hotJobs: ["机械设计工程师", "工艺工程师", "质量工程师"], avgSalary: "7-12k", topEmployers: ["比亚迪", "三一重工", "大疆创新"] },
+  "automation": { hotCities: ["深圳", "上海", "苏州"], hotIndustries: ["工业自动化", "机器人", "智能制造"], hotJobs: ["自动化工程师", "PLC工程师", "机器人调试工程师"], avgSalary: "8-14k", topEmployers: ["汇川技术", "大疆创新", "西门子中国"] },
+  "civil": { hotCities: ["成都", "武汉", "重庆"], hotIndustries: ["建筑施工", "基建设计", "市政工程"], hotJobs: ["施工员", "结构设计师", "造价工程师"], avgSalary: "5-8k", topEmployers: ["中建集团", "中交集团", "中铁集团"] },
+  "architecture": { hotCities: ["上海", "北京", "深圳"], hotIndustries: ["建筑设计", "城市规划", "室内设计"], hotJobs: ["建筑设计师助理", "方案设计师", "BIM工程师"], avgSalary: "5-9k", topEmployers: ["中国建筑设计院", "Gensler上海", "华建集团"] },
+  "biomedical": { hotCities: ["上海", "深圳", "苏州"], hotIndustries: ["医疗器械", "体外诊断", "医学影像"], hotJobs: ["医疗器械研发工程师", "注册专员", "临床应用工程师"], avgSalary: "8-13k", topEmployers: ["迈瑞医疗", "联影医疗", "微创医疗"] },
+  "vehicle": { hotCities: ["上海", "深圳", "合肥"], hotIndustries: ["新能源汽车", "智能驾驶", "汽车零部件"], hotJobs: ["车辆标定工程师", "三电系统工程师", "智驾测试工程师"], avgSalary: "9-15k", topEmployers: ["比亚迪", "蔚来汽车", "小鹏汽车"] },
+  "chemical-eng": { hotCities: ["上海", "南京", "大连"], hotIndustries: ["石油化工", "新材料", "精细化工"], hotJobs: ["工艺工程师", "研发工程师", "化工安全工程师"], avgSalary: "6-10k", topEmployers: ["万华化学", "中石化", "巴斯夫中国"] },
+  "physics": { hotCities: ["北京", "上海", "合肥"], hotIndustries: ["半导体", "量子技术", "光电子"], hotJobs: ["光学工程师", "芯片工艺工程师", "量化研究员"], avgSalary: "8-15k", topEmployers: ["中科院研究所", "中芯国际", "华为"] },
+  "statistics": { hotCities: ["北京", "上海", "杭州"], hotIndustries: ["金融", "互联网", "咨询"], hotJobs: ["数据分析师", "精算师助理", "风控建模师"], avgSalary: "9-15k", topEmployers: ["中国平安", "字节跳动", "麦肯锡中国"] },
+  "biotech": { hotCities: ["上海", "苏州", "北京"], hotIndustries: ["创新药研发", "基因检测", "生物制品"], hotJobs: ["研发实验员", "细胞培养工程师", "生物信息分析师"], avgSalary: "6-10k", topEmployers: ["药明康德", "百济神州", "华大基因"] },
+  "applied-chem": { hotCities: ["上海", "深圳", "苏州"], hotIndustries: ["新能源材料", "精细化工", "电子化学品"], hotJobs: ["研发工程师", "品质工程师", "实验室分析员"], avgSalary: "6-9k", topEmployers: ["宁德时代", "万华化学", "陶氏化学中国"] },
+  "economics": { hotCities: ["北京", "上海", "深圳"], hotIndustries: ["银行", "证券", "政府智库"], hotJobs: ["行业研究员", "银行管培生", "经济分析师"], avgSalary: "7-12k", topEmployers: ["中国人民银行", "国泰君安", "社科院"] },
+  "international-trade": { hotCities: ["上海", "深圳", "宁波"], hotIndustries: ["跨境电商", "外贸公司", "国际物流"], hotJobs: ["外贸业务员", "跨境电商运营", "国际采购专员"], avgSalary: "5-9k", topEmployers: ["SHEIN", "阿里国际", "顺丰国际"] },
+  "financial-eng": { hotCities: ["上海", "北京", "深圳"], hotIndustries: ["量化投资", "证券衍生品", "金融科技"], hotJobs: ["量化策略研究员", "金融产品经理", "风险建模师"], avgSalary: "12-20k", topEmployers: ["九坤投资", "中信建投", "蚂蚁集团"] },
+  "business-admin": { hotCities: ["上海", "北京", "广州"], hotIndustries: ["快消品", "互联网", "管理咨询"], hotJobs: ["管培生", "运营专员", "项目管理助理"], avgSalary: "6-10k", topEmployers: ["宝洁", "联合利华", "埃森哲中国"] },
+  "marketing": { hotCities: ["上海", "北京", "杭州"], hotIndustries: ["电商", "快消品", "数字营销"], hotJobs: ["市场推广专员", "品牌策划", "用户增长运营"], avgSalary: "6-10k", topEmployers: ["阿里巴巴", "宝洁", "奥美广告"] },
+  "info-management": { hotCities: ["北京", "上海", "杭州"], hotIndustries: ["企业信息化", "互联网", "管理咨询"], hotJobs: ["产品经理", "ERP实施顾问", "数据分析师"], avgSalary: "8-13k", topEmployers: ["用友网络", "SAP中国", "腾讯"] },
+  "big-data-mgmt": { hotCities: ["北京", "杭州", "深圳"], hotIndustries: ["互联网", "金融科技", "智慧城市"], hotJobs: ["数据产品经理", "商业分析师", "数据治理专员"], avgSalary: "9-15k", topEmployers: ["蚂蚁集团", "美团", "华为"] },
+  "dentistry": { hotCities: ["北京", "上海", "成都"], hotIndustries: ["口腔连锁", "公立医院", "口腔器材"], hotJobs: ["口腔全科医师", "正畸医师", "口腔修复医师"], avgSalary: "8-15k", topEmployers: ["通策医疗", "瑞尔齿科", "三甲医院口腔科"] },
+  "pharmacy": { hotCities: ["上海", "苏州", "北京"], hotIndustries: ["创新药企", "CRO/CDMO", "医院药房"], hotJobs: ["药物研发员", "临床监查员", "药品注册专员"], avgSalary: "7-11k", topEmployers: ["恒瑞医药", "药明康德", "阿斯利康中国"] },
+  "nursing": { hotCities: ["北京", "上海", "广州"], hotIndustries: ["公立医院", "养老护理", "医疗美容"], hotJobs: ["临床护士", "ICU护士", "健康管理师"], avgSalary: "5-8k", topEmployers: ["三甲医院", "和睦家医疗", "泰康养老"] },
+  "tcm": { hotCities: ["北京", "广州", "成都"], hotIndustries: ["中医院", "中药企业", "康养产业"], hotJobs: ["中医师", "中药研发员", "康复治疗师"], avgSalary: "5-9k", topEmployers: ["广东省中医院", "同仁堂", "云南白药"] },
+  "sociology": { hotCities: ["北京", "上海", "广州"], hotIndustries: ["社会组织", "政府部门", "市场调研"], hotJobs: ["用户研究员", "社会调查分析师", "公务员"], avgSalary: "5-8k", topEmployers: ["政府民政部门", "尼尔森中国", "公益基金会"] },
+  "chinese-lit": { hotCities: ["北京", "上海", "杭州"], hotIndustries: ["新媒体", "教育培训", "出版传媒"], hotJobs: ["内容编辑", "文案策划", "中学语文教师"], avgSalary: "5-8k", topEmployers: ["字节跳动", "中信出版社", "公立学校"] },
+  "english": { hotCities: ["上海", "北京", "深圳"], hotIndustries: ["跨境电商", "翻译本地化", "教育"], hotJobs: ["翻译", "跨境电商运营", "英语培训师"], avgSalary: "5-9k", topEmployers: ["传神语联", "SHEIN", "新东方"] },
+  "animation": { hotCities: ["杭州", "上海", "成都"], hotIndustries: ["游戏", "动画制作", "短视频特效"], hotJobs: ["3D动画师", "原画设计师", "游戏角色设计师"], avgSalary: "6-11k", topEmployers: ["米哈游", "B站", "追光动画"] },
+  "digital-media": { hotCities: ["上海", "杭州", "深圳"], hotIndustries: ["游戏", "互动娱乐", "数字营销"], hotJobs: ["UI/UX设计师", "交互设计师", "视频特效师"], avgSalary: "7-12k", topEmployers: ["网易游戏", "腾讯互娱", "小红书"] },
+
+  // 教育学
+  "preschool-education":      { hotCities: ["上海", "深圳", "杭州"], hotIndustries: ["高端幼儿园", "托育机构", "早教中心"], hotJobs: ["幼儿教师", "托育教师", "早教课程顾问"], avgSalary: "4-7k", topEmployers: ["金苹果教育", "贝聊幼儿园", "公立幼儿园"] },
+  "physical-education":       { hotCities: ["北京", "上海", "成都"], hotIndustries: ["中小学校", "体育培训", "健身行业"], hotJobs: ["体育教师", "青少年体能教练", "健身私教"], avgSalary: "5-8k", topEmployers: ["公立中学体育组", "动因体育", "威尔士健身"] },
+  "special-education":        { hotCities: ["北京", "上海", "南京"], hotIndustries: ["特殊教育学校", "康复机构", "融合教育"], hotJobs: ["特教教师", "自闭症干预师", "言语治疗师"], avgSalary: "5-9k", topEmployers: ["大米和小米", "星星雨", "各地特殊教育学校"] },
+  "educational-technology":   { hotCities: ["北京", "上海", "深圳"], hotIndustries: ["EdTech公司", "在线教育", "企业培训"], hotJobs: ["教学设计师", "学习体验设计师", "AI教育产品经理"], avgSalary: "7-12k", topEmployers: ["网易有道", "科大讯飞", "好未来"] },
+
+  // 农学
+  "agronomy":                 { hotCities: ["北京", "南京", "武汉"], hotIndustries: ["种业公司", "农科院所", "农资企业"], hotJobs: ["育种研究员", "农技推广员", "种子销售经理"], avgSalary: "5-8k", topEmployers: ["隆平高科", "先正达中国", "中国农科院"] },
+  "veterinary-medicine":      { hotCities: ["上海", "北京", "广州"], hotIndustries: ["宠物医院", "畜牧企业", "动保企业"], hotJobs: ["宠物医生", "畜牧兽医", "动物保健技术员"], avgSalary: "6-12k", topEmployers: ["新瑞鹏宠物医疗", "瑞派宠物医院", "牧原股份"] },
+  "landscape-architecture":   { hotCities: ["北京", "上海", "成都"], hotIndustries: ["园林设计院", "市政工程", "文旅开发"], hotJobs: ["景观设计师", "园林工程师", "生态修复工程师"], avgSalary: "5-9k", topEmployers: ["奥雅设计", "蒙草生态", "AECOM中国"] },
+  "food-science-engineering": { hotCities: ["上海", "广州", "成都"], hotIndustries: ["食品企业", "第三方检测", "餐饮供应链"], hotJobs: ["食品研发工程师", "品质管理专员", "食品安全工程师"], avgSalary: "5-9k", topEmployers: ["玛氏中国", "雀巢中国", "伊利集团"] },
+  "animal-science":           { hotCities: ["郑州", "长沙", "南宁"], hotIndustries: ["大型牧企", "饲料企业", "动保企业"], hotJobs: ["养殖场管培生", "饲料配方师", "技术服务经理"], avgSalary: "5-10k", topEmployers: ["牧原股份", "温氏股份", "新希望六和"] },
+  "aquaculture":              { hotCities: ["广州", "青岛", "厦门"], hotIndustries: ["水产养殖企业", "饲料企业", "水产加工"], hotJobs: ["养殖技术员", "水产种苗技术员", "饲料销售经理"], avgSalary: "5-8k", topEmployers: ["海大集团", "通威股份", "国联水产"] },
+
+  // 历史学
+  "history":                  { hotCities: ["北京", "南京", "西安"], hotIndustries: ["教育行业", "博物馆文保", "公务员"], hotJobs: ["历史教师", "博物馆讲解员", "文化遗产保护员"], avgSalary: "4-7k", topEmployers: ["各地中学", "故宫博物院", "国家文物局"] },
+
+  // 工学（续）
+  "environmental-engineering":{ hotCities: ["北京", "上海", "深圳"], hotIndustries: ["环保工程公司", "环境咨询", "碳交易"], hotJobs: ["环保工程师", "环评工程师", "碳核算专员"], avgSalary: "6-10k", topEmployers: ["北控水务", "光大环境", "中节能"] },
+  "materials-science":        { hotCities: ["深圳", "上海", "合肥"], hotIndustries: ["新能源电池", "半导体", "先进制造"], hotJobs: ["材料研发工程师", "工艺工程师", "失效分析工程师"], avgSalary: "7-12k", topEmployers: ["宁德时代", "比亚迪", "中芯国际"] },
+  "surveying-mapping":        { hotCities: ["北京", "武汉", "南京"], hotIndustries: ["测绘院", "无人机服务", "自动驾驶"], hotJobs: ["测绘工程师", "GIS开发工程师", "遥感数据分析师"], avgSalary: "6-10k", topEmployers: ["中国测绘科学研究院", "大疆创新", "四维图新"] },
+  "mining-engineering":       { hotCities: ["北京", "包头", "赣州"], hotIndustries: ["矿业集团", "新能源矿产", "矿山设计院"], hotJobs: ["采矿工程师", "矿山安全工程师", "矿产地质工程师"], avgSalary: "7-12k", topEmployers: ["中国黄金", "紫金矿业", "赣锋锂业"] },
+  "textile-engineering":      { hotCities: ["上海", "苏州", "绍兴"], hotIndustries: ["纺织服装企业", "功能面料研发", "外贸公司"], hotJobs: ["纺织工艺工程师", "面料开发专员", "质检工程师"], avgSalary: "5-8k", topEmployers: ["鲁泰纺织", "申洲国际", "恒力集团"] },
+  "transportation":           { hotCities: ["北京", "成都", "武汉"], hotIndustries: ["铁路局", "地铁公司", "交通规划院"], hotJobs: ["交通规划工程师", "轨道交通运营管理", "智能交通工程师"], avgSalary: "6-10k", topEmployers: ["各地铁路局", "各市地铁公司", "中交集团"] },
+  "aerospace-engineering":    { hotCities: ["北京", "西安", "上海"], hotIndustries: ["航天院所", "商业航天", "航空制造"], hotJobs: ["飞行器设计工程师", "飞控系统工程师", "推进系统工程师"], avgSalary: "10-18k", topEmployers: ["航天科技集团", "中航工业", "蓝箭航天"] },
+  "naval-architecture":       { hotCities: ["上海", "大连", "武汉"], hotIndustries: ["船舶制造", "海洋工程", "船级社"], hotJobs: ["船舶设计工程师", "海洋工程师", "船舶建造监理"], avgSalary: "7-12k", topEmployers: ["中国船舶集团", "招商局重工", "外高桥造船"] },
+  "cyberspace-security":      { hotCities: ["北京", "深圳", "成都"], hotIndustries: ["网络安全企业", "互联网大厂", "金融机构"], hotJobs: ["安全工程师", "渗透测试工程师", "安全运营分析师"], avgSalary: "10-18k", topEmployers: ["奇安信", "深信服", "腾讯安全"] },
+
+  // 理学（续）
+  "geography":                { hotCities: ["北京", "南京", "武汉"], hotIndustries: ["中学教育", "自然资源部门", "GIS企业"], hotJobs: ["地理教师", "GIS工程师", "国土规划专员"], avgSalary: "5-8k", topEmployers: ["各地中学", "超图软件", "各市自然资源局"] },
+  "marine-science":           { hotCities: ["青岛", "厦门", "广州"], hotIndustries: ["海洋研究所", "海洋工程", "海洋环保"], hotJobs: ["海洋调查助理", "海洋环境监测员", "海洋数据分析师"], avgSalary: "5-9k", topEmployers: ["中科院海洋所", "自然资源部海洋研究所", "中海油"] },
+  "psychology":               { hotCities: ["北京", "上海", "深圳"], hotIndustries: ["互联网", "教育机构", "心理咨询"], hotJobs: ["用户研究员", "心理咨询师", "人才测评顾问"], avgSalary: "6-12k", topEmployers: ["字节跳动", "壹心理", "北师大心理咨询中心"] },
+  "astronomy":                { hotCities: ["北京", "南京", "昆明"], hotIndustries: ["天文台", "高校科研", "航天机构"], hotJobs: ["天文研究助理", "数据分析师", "科学传播专员"], avgSalary: "6-10k", topEmployers: ["中科院国家天文台", "紫金山天文台", "上海天文台"] },
+  "chemistry":                { hotCities: ["上海", "深圳", "苏州"], hotIndustries: ["制药/CRO", "新能源", "精细化工"], hotJobs: ["合成研究员", "分析化学工程师", "电池材料研发员"], avgSalary: "6-10k", topEmployers: ["药明康德", "万华化学", "宁德时代"] },
+  "ecology":                  { hotCities: ["北京", "上海", "成都"], hotIndustries: ["环保咨询", "碳交易", "自然保护"], hotJobs: ["环评工程师", "碳交易分析师", "生态调查员"], avgSalary: "5-8k", topEmployers: ["中国环科院", "碳交易所", "各环保咨询公司"] },
+  "atmospheric-science":      { hotCities: ["北京", "南京", "成都"], hotIndustries: ["气象局", "航空气象", "环境监测"], hotJobs: ["气象预报员", "气象数据分析师", "环境监测员"], avgSalary: "5-9k", topEmployers: ["各级气象局", "民航气象中心", "华为（AI气象）"] },
+
+  // 医学（续）
+  "preventive-medicine":      { hotCities: ["北京", "上海", "武汉"], hotIndustries: ["疾控中心", "卫健委", "医药企业"], hotJobs: ["公共卫生医师", "流行病学调查员", "健康管理师"], avgSalary: "6-10k", topEmployers: ["中国疾控中心", "各省市疾控", "各级卫健委"] },
+  "medical-imaging":          { hotCities: ["北京", "上海", "广州"], hotIndustries: ["三甲医院", "AI影像公司", "第三方影像中心"], hotJobs: ["影像诊断医师", "介入放射技师", "AI影像产品专家"], avgSalary: "7-12k", topEmployers: ["各三甲医院影像科", "联影医疗", "推想科技"] },
+  "anesthesiology":           { hotCities: ["北京", "上海", "广州"], hotIndustries: ["三甲医院", "日间手术中心", "疼痛诊所"], hotJobs: ["麻醉科医师", "疼痛科医师", "重症监护医师"], avgSalary: "8-15k", topEmployers: ["各三甲医院麻醉科", "和睦家医疗", "各市人民医院"] },
+  "medical-laboratory":       { hotCities: ["上海", "广州", "杭州"], hotIndustries: ["第三方检验", "IVD企业", "医院检验科"], hotJobs: ["检验技师", "分子诊断工程师", "临床应用专员"], avgSalary: "5-9k", topEmployers: ["金域医学", "迪安诊断", "迈瑞医疗"] },
+  "rehabilitation-therapy":   { hotCities: ["上海", "北京", "成都"], hotIndustries: ["三甲医院康复科", "康复专科医院", "运动康复中心"], hotJobs: ["物理治疗师", "作业治疗师", "运动康复师"], avgSalary: "5-9k", topEmployers: ["各三甲医院康复科", "顾连医疗", "和睦家康复"] },
+
+  // 文学（续）
+  "japanese":                 { hotCities: ["上海", "大连", "苏州"], hotIndustries: ["日企制造业", "跨境电商", "游戏本地化"], hotJobs: ["日语翻译", "日企商务助理", "对日跨境电商运营"], avgSalary: "5-8k", topEmployers: ["松下中国", "索尼中国", "网易游戏"] },
+  "communication":            { hotCities: ["北京", "上海", "杭州"], hotIndustries: ["新媒体", "公关传播", "市场调研"], hotJobs: ["新媒体运营", "公关专员", "品牌传播策划"], avgSalary: "5-9k", topEmployers: ["蓝色光标", "字节跳动", "奥美广告"] },
+  "advertising":              { hotCities: ["上海", "北京", "广州"], hotIndustries: ["广告代理", "数字营销", "品牌咨询"], hotJobs: ["策划专员", "媒介投放专员", "客户执行"], avgSalary: "5-9k", topEmployers: ["奥美广告", "阳狮集团", "蓝色光标"] },
+  "new-media":                { hotCities: ["杭州", "北京", "深圳"], hotIndustries: ["短视频平台", "电商直播", "内容MCN"], hotJobs: ["新媒体运营", "短视频编导", "社群运营"], avgSalary: "5-8k", topEmployers: ["字节跳动", "小红书", "快手"] },
+  "french":                   { hotCities: ["北京", "上海", "广州"], hotIndustries: ["外交外事", "中非贸易", "国际组织"], hotJobs: ["法语翻译", "外贸业务员", "驻外项目助理"], avgSalary: "5-9k", topEmployers: ["中建集团（非洲项目）", "华为（法语区）", "法国驻华企业"] },
+  "german":                   { hotCities: ["上海", "北京", "青岛"], hotIndustries: ["德企制造业", "汽车行业", "留学教育"], hotJobs: ["德语翻译", "德企商务助理", "留学顾问"], avgSalary: "5-9k", topEmployers: ["大众中国", "西门子中国", "博世中国"] },
+
+  // 法学（续）
+  "political-science":        { hotCities: ["北京", "上海", "南京"], hotIndustries: ["政府机关", "事业单位", "智库"], hotJobs: ["公务员", "政策研究员", "党务干事"], avgSalary: "5-8k", topEmployers: ["各级政府机关", "社科院", "新华社"] },
+  "social-work":              { hotCities: ["北京", "上海", "广州"], hotIndustries: ["社区服务", "社会组织", "民政系统"], hotJobs: ["社区社工", "公益项目专员", "社会救助员"], avgSalary: "4-6k", topEmployers: ["街道社区中心", "公益基金会", "民政局"] },
+  "international-politics":   { hotCities: ["北京", "上海", "广州"], hotIndustries: ["外交外事", "智库研究", "国际新闻"], hotJobs: ["政策研究助理", "国际新闻编辑", "外事专员"], avgSalary: "5-9k", topEmployers: ["外交部", "新华社", "中国国际问题研究院"] },
+  "ideological-political-edu":{ hotCities: ["北京", "武汉", "长沙"], hotIndustries: ["高校", "中学", "党政机关"], hotJobs: ["思政教师", "高校辅导员", "党务工作者"], avgSalary: "5-8k", topEmployers: ["公立中学", "各高校", "各级党委宣传部"] },
+
+  // 管理学（续）
+  "public-admin":             { hotCities: ["北京", "南京", "成都"], hotIndustries: ["政府机关", "事业单位", "社会组织"], hotJobs: ["公务员", "事业编文员", "行政专员"], avgSalary: "4-7k", topEmployers: ["各级政府机关", "事业单位", "国企行政部"] },
+  "public-admin-mgmt":        { hotCities: ["北京", "上海", "广州"], hotIndustries: ["政府机关", "国企", "物业管理"], hotJobs: ["公务员", "行政助理", "办公室文员"], avgSalary: "4-7k", topEmployers: ["各级政府机关", "央企总部", "万科物业"] },
+  "tourism-mgmt":             { hotCities: ["上海", "北京", "成都"], hotIndustries: ["在线旅游", "酒店集团", "文旅景区"], hotJobs: ["酒店管培生", "旅游产品经理", "文旅策划"], avgSalary: "4-7k", topEmployers: ["携程", "希尔顿中国", "华侨城"] },
+  "logistics-mgmt":           { hotCities: ["上海", "广州", "深圳"], hotIndustries: ["电商物流", "第三方物流", "供应链管理"], hotJobs: ["物流专员", "仓储主管", "供应链分析师"], avgSalary: "5-9k", topEmployers: ["京东物流", "顺丰", "菜鸟网络"] },
+  "ecommerce":                { hotCities: ["杭州", "深圳", "广州"], hotIndustries: ["跨境电商", "直播电商", "电商代运营"], hotJobs: ["电商运营", "跨境电商专员", "直播运营"], avgSalary: "5-9k", topEmployers: ["SHEIN", "阿里巴巴", "拼多多"] },
+  "hr-mgmt":                  { hotCities: ["上海", "北京", "深圳"], hotIndustries: ["人力资源服务", "互联网", "制造业"], hotJobs: ["招聘专员", "薪酬绩效专员", "HRBP助理"], avgSalary: "5-9k", topEmployers: ["前程无忧", "字节跳动", "华为"] },
+
+  // 艺术学（续）
+  "env-design":               { hotCities: ["上海", "深圳", "成都"], hotIndustries: ["室内设计", "景观设计", "商业空间"], hotJobs: ["室内设计师助理", "景观设计师", "软装设计师"], avgSalary: "5-8k", topEmployers: ["金螳螂", "贝尔高林", "万达商管"] },
+  "product-design":           { hotCities: ["深圳", "上海", "杭州"], hotIndustries: ["消费电子", "智能硬件", "家居用品"], hotJobs: ["产品设计师", "CMF设计师", "用户体验设计师"], avgSalary: "6-10k", topEmployers: ["大疆创新", "小米", "OPPO"] },
+  "music-performance":        { hotCities: ["北京", "上海", "成都"], hotIndustries: ["音乐教育", "演出经纪", "文化传媒"], hotJobs: ["音乐教师", "乐团演奏员", "音乐培训师"], avgSalary: "4-8k", topEmployers: ["公立学校", "各地交响乐团", "VIP陪练"] },
+  "drama-film-lit":           { hotCities: ["北京", "上海", "杭州"], hotIndustries: ["影视制作", "短剧公司", "网络文学"], hotJobs: ["编剧助理", "短剧编剧", "剧本策划"], avgSalary: "4-8k", topEmployers: ["华策影视", "柠萌影视", "阅文集团"] },
+  "broadcasting-directing":   { hotCities: ["北京", "上海", "杭州"], hotIndustries: ["短视频", "综艺制作", "企业宣传"], hotJobs: ["视频编导", "短视频导演", "后期剪辑师"], avgSalary: "5-9k", topEmployers: ["字节跳动", "芒果TV", "二更视频"] },
+  "photography":              { hotCities: ["北京", "上海", "杭州"], hotIndustries: ["电商摄影", "婚纱摄影", "新闻媒体"], hotJobs: ["商业摄影师", "电商摄影师", "摄影助理"], avgSalary: "4-8k", topEmployers: ["视觉中国", "韩艺婚纱", "各电商公司"] },
+  "fashion-design":           { hotCities: ["上海", "深圳", "广州"], hotIndustries: ["服装品牌", "快时尚", "运动服饰"], hotJobs: ["服装设计师助理", "版师", "面料开发专员"], avgSalary: "5-8k", topEmployers: ["安踏", "李宁", "SHEIN"] },
+  "arts-crafts":              { hotCities: ["北京", "杭州", "景德镇"], hotIndustries: ["文创产品", "非遗传承", "首饰设计"], hotJobs: ["文创设计师", "工艺品设计师", "手作工作室主理人"], avgSalary: "4-7k", topEmployers: ["故宫文创", "朱炳仁铜雕", "各非遗工作室"] },
+
+  // 经济学（续）
+  "public-finance":           { hotCities: ["北京", "上海", "南京"], hotIndustries: ["财政系统", "银行", "证券"], hotJobs: ["公务员（财政局）", "银行柜员", "审计助理"], avgSalary: "5-9k", topEmployers: ["各级财政局", "国有银行", "审计署"] },
+  "taxation":                 { hotCities: ["北京", "上海", "深圳"], hotIndustries: ["税务师事务所", "企业财税", "税务局"], hotJobs: ["税务专员", "税务筹划师", "公务员（税务局）"], avgSalary: "5-9k", topEmployers: ["普华永道税务", "各级税务局", "德勤税务"] },
+  "insurance":                { hotCities: ["上海", "北京", "深圳"], hotIndustries: ["保险公司", "保险科技", "精算咨询"], hotJobs: ["核保专员", "理赔专员", "保险产品经理"], avgSalary: "5-10k", topEmployers: ["中国平安", "中国人寿", "众安保险"] }
+};
+
+// ===== SCORE TIERS =====
+// schoolDep: "high"=学校决定命运 / "medium"=有影响但可补救 / "low"=执照/技能>学校
+// tianKeng: AI替代风险高或行业下行严重
+// peiTi: 低分段可考虑的平替专业
+// tiers.verdict: 强烈推荐/推荐/可选/慎选/不推荐
+const SCORE_TIERS = {
+  "cs":                   { schoolDep:"high",   tianKeng:false, peiTi:"测控技术与仪器",
+    tiers:{ high:{verdict:"强烈推荐",reason:"985=大厂直通车，算法/架构薪资领跑",careerPath:"大厂算法/架构师",salary:"20-35k"},
+            mid: {verdict:"推荐",    reason:"优先成都/杭州学校，需项目能力竞争中型企业",careerPath:"中小企业开发工程师",salary:"10-16k"},
+            low: {verdict:"不推荐",  reason:"AI压缩初级岗，普通院校毕业难逃外包",careerPath:"外包/IT支持/AI销售",salary:"5-8k"}}},
+  "software-eng":         { schoolDep:"high",   tianKeng:false, peiTi:"测控技术与仪器",
+    tiers:{ high:{verdict:"强烈推荐",reason:"985/211工程院校直通大厂，产品/架构方向广",careerPath:"互联网大厂工程师/技术总监",salary:"18-30k"},
+            mid: {verdict:"推荐",    reason:"需提前做项目积累，选互联网聚集城市",careerPath:"中小厂工程师/外包转正",salary:"8-15k"},
+            low: {verdict:"慎选",    reason:"初级岗被AI+外包挤压，需靠技能突围",careerPath:"外包开发/系统维护",salary:"5-8k"}}},
+  "ai":                   { schoolDep:"high",   tianKeng:false, peiTi:"自动化",
+    tiers:{ high:{verdict:"强烈推荐",reason:"985科研平台直通AI头部岗位，博士优先",careerPath:"AI研究员/算法工程师",salary:"25-50k"},
+            mid: {verdict:"推荐",    reason:"本科需读研提升，否则进不了核心AI岗",careerPath:"AI应用工程师/数据工程师",salary:"12-20k"},
+            low: {verdict:"不推荐",  reason:"学不到前沿内容，就业竞争激烈",careerPath:"IT运维/数据标注",salary:"5-8k"}}},
+  "data-science":         { schoolDep:"high",   tianKeng:false, peiTi:"统计学",
+    tiers:{ high:{verdict:"强烈推荐",reason:"数理基础强+985背景=高薪数据科学岗",careerPath:"数据科学家/量化分析师",salary:"18-30k"},
+            mid: {verdict:"推荐",    reason:"需补项目经验，转行数据分析师可行",careerPath:"数据分析师/BI工程师",salary:"8-15k"},
+            low: {verdict:"不推荐",  reason:"工具被AI平台化，普通校缺核心算法课",careerPath:"数据录入/报表员",salary:"5-7k"}}},
+  "cyberspace-security":  { schoolDep:"high",   tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"强烈推荐",reason:"国家重点方向+顶校背景直通头部安全岗",careerPath:"安全研究员/渗透测试工程师",salary:"18-30k"},
+            mid: {verdict:"推荐",    reason:"考CISP认证补足背书，攻防实战能力是关键",careerPath:"安全运营/等保合规工程师",salary:"8-15k"},
+            low: {verdict:"可选",    reason:"考证可保底就业，但高端岗门槛高",careerPath:"安全运维/合规助理",salary:"6-9k"}}},
+  "ee":                   { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"强烈推荐",reason:"985背景+芯片/通信方向需求旺盛",careerPath:"芯片设计/通信研发工程师",salary:"15-28k"},
+            mid: {verdict:"推荐",    reason:"嵌入式/通信方向出路稳定，技能是关键",careerPath:"嵌入式工程师/硬件工程师",salary:"8-14k"},
+            low: {verdict:"可选",    reason:"偏应用方向可就业，高端岗难进",careerPath:"电子技术员/售后工程师",salary:"5-8k"}}},
+  "telecom":              { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"强烈推荐",reason:"华为/中兴优先名校，5G/6G研发持续招人",careerPath:"通信研发工程师/无线技术专家",salary:"15-25k"},
+            mid: {verdict:"推荐",    reason:"运营商和集成商需求稳定，考证有加成",careerPath:"网络优化工程师/通信工程师",salary:"8-14k"},
+            low: {verdict:"可选",    reason:"运营商基层岗可进，但薪资有限",careerPath:"基站维护/网络运维",salary:"5-8k"}}},
+  "electrical":           { schoolDep:"high",   tianKeng:false, peiTi:"能源动力工程",
+    tiers:{ high:{verdict:"强烈推荐",reason:"国家电网/南网985定向招募，薪资顶尖",careerPath:"国家电网研发/电力系统工程师",salary:"15-25k"},
+            mid: {verdict:"推荐",    reason:"进地方电力公司或电气设备企业有路可走",careerPath:"电力系统工程师/自动化工程师",salary:"8-14k"},
+            low: {verdict:"慎选",    reason:"国网不招普通院校，民营电气竞争激烈",careerPath:"电气维修/低压配电工程师",salary:"5-8k"}}},
+  "mechanical":           { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"强烈推荐",reason:"顶校机械可进高端制造/航天/汽车研发",careerPath:"研发工程师/智能制造系统工程师",salary:"12-22k"},
+            mid: {verdict:"推荐",    reason:"制造业用人量大，新能源车/机器人是增长点",careerPath:"工程师/生产技术管理",salary:"7-12k"},
+            low: {verdict:"可选",    reason:"加工厂和供应链技术岗需求量大",careerPath:"工艺员/车间技术员",salary:"5-8k"}}},
+  "automation":           { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"强烈推荐",reason:"工业机器人/智能制造高速增长，顶校直通核心研发",careerPath:"工业机器人研发/自动化系统设计师",salary:"14-25k"},
+            mid: {verdict:"推荐",    reason:"PLC/SCADA技能需求稳定，外资企业好机会",careerPath:"自动化工程师/控制系统工程师",salary:"8-14k"},
+            low: {verdict:"推荐",    reason:"自动化维护岗用量大，操作维护有竞争力",careerPath:"自动化设备维护/PLC程序员",salary:"6-10k"}}},
+  "aerospace-engineering":{ schoolDep:"high",   tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"强烈推荐",reason:"门槛极高但航天央企+商业航天需求爆发",careerPath:"航天院所工程师/商业航天技术专家",salary:"18-30k"},
+            mid: {verdict:"推荐",    reason:"读研是基本门槛，军工院所有编制岗",careerPath:"航天院所研究员/飞控工程师",salary:"10-18k"},
+            low: {verdict:"可选",    reason:"普通校入行难，往地面系统/机场地面岗转",careerPath:"机场地面工程/通用航空维修",salary:"6-9k"}}},
+  "naval-architecture":   { schoolDep:"low",    tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"中国造船全球第一，顶校直通船厂和科研院所",careerPath:"总体设计师/海洋工程师",salary:"12-20k"},
+            mid: {verdict:"推荐",    reason:"LNG船/军舰建造需求稳定，实践能力重要",careerPath:"船舶工程师/建造监理",salary:"7-12k"},
+            low: {verdict:"推荐",    reason:"造船业需求大，即使普通院校就业也不难",careerPath:"船厂技术员/质检员",salary:"5-8k"}}},
+  "materials-science":    { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"强烈推荐",reason:"半导体/新能源材料热门，985背景直通头部",careerPath:"半导体材料研发/新能源电池工程师",salary:"15-25k"},
+            mid: {verdict:"推荐",    reason:"选对方向（锂电/光伏）就业好",careerPath:"材料工程师/工艺工程师",salary:"8-14k"},
+            low: {verdict:"可选",    reason:"传统方向就业一般，考研转方向是出路",careerPath:"材料检测员/品质工程师",salary:"5-8k"}}},
+  "chemical-eng":         { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"强烈推荐",reason:"石化/新能源化工顶校有竞争力",careerPath:"化工研发/工艺工程师",salary:"12-20k"},
+            mid: {verdict:"推荐",    reason:"化工行业需求稳定，但工作条件艰苦",careerPath:"化工工程师/安全工程师",salary:"7-12k"},
+            low: {verdict:"可选",    reason:"基层操作岗有需求，但薪资低、环境差",careerPath:"化工操作员/安全员",salary:"5-8k"}}},
+  "environmental-engineering":{ schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校可进环保科技企业，碳中和方向有增长",careerPath:"碳交易咨询/环保科技工程师",salary:"10-18k"},
+            mid: {verdict:"推荐",    reason:"环评岗需求稳定，但利润薄",careerPath:"环评工程师/环保督查员",salary:"6-10k"},
+            low: {verdict:"可选",    reason:"环评岗门槛低，但被AI替代趋势明显",careerPath:"环保监测员/报告员",salary:"5-7k"}}},
+  "surveying-mapping":    { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"无人机测绘/自动驾驶高精地图有高薪岗",careerPath:"高精地图工程师/测绘系统研发",salary:"10-18k"},
+            mid: {verdict:"推荐",    reason:"GIS开发和测绘工程师需求稳定",careerPath:"GIS工程师/测绘工程师",salary:"7-12k"},
+            low: {verdict:"可选",    reason:"基础测量岗位需求稳定但薪资低",careerPath:"测绘员/地籍调查员",salary:"5-8k"}}},
+  "mining-engineering":   { schoolDep:"low",    tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"新能源矿产（锂/钴）开发需求高，顶校有优势",careerPath:"矿山总工/新能源矿产开发专家",salary:"12-20k"},
+            mid: {verdict:"推荐",    reason:"薪资不低但得去矿山，大型矿企需求稳定",careerPath:"采矿工程师/安全工程师",salary:"8-14k"},
+            low: {verdict:"推荐",    reason:"矿山需求量大，即使普通院校就业也不难（接受条件前提下）",careerPath:"矿山技术员/安全员",salary:"6-10k"}}},
+  "transportation":       { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校直通轨道交通/智能交通科研岗",careerPath:"智能交通系统工程师/交通规划师",salary:"10-18k"},
+            mid: {verdict:"推荐",    reason:"铁路/地铁/高速国企需求稳定",careerPath:"铁路/地铁运营工程师",salary:"7-12k"},
+            low: {verdict:"推荐",    reason:"交通国企用量大，学历要求相对宽松",careerPath:"运输管理员/站务员",salary:"5-8k"}}},
+  "textile-engineering":  { schoolDep:"low",    tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"可选",    reason:"功能性纺织/智能穿戴有增长，但体量小",careerPath:"功能性纺织研发/技术总监",salary:"8-14k"},
+            mid: {verdict:"可选",    reason:"传统纺织在萎缩，需转功能性方向",careerPath:"质检工程师/工艺工程师",salary:"5-8k"},
+            low: {verdict:"慎选",    reason:"夕阳产业+院校资源弱，就业竞争力差",careerPath:"纺织厂操作员/技术员",salary:"4-6k"}}},
+  "biomedical":           { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校+读研可进高端医疗器械研发",careerPath:"医疗器械研发工程师/生物医学工程师",salary:"12-20k"},
+            mid: {verdict:"推荐",    reason:"医疗器械销售和维修需求稳定",careerPath:"医疗器械工程师/技术销售",salary:"8-14k"},
+            low: {verdict:"可选",    reason:"医疗器械维修和基层岗有需求",careerPath:"医疗器械维修员/技术支持",salary:"5-8k"}}},
+  "vehicle":              { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"强烈推荐",reason:"新能源车爆发，顶校直通比亚迪/华为智能驾驶",careerPath:"整车研发工程师/新能源车研发",salary:"15-25k"},
+            mid: {verdict:"推荐",    reason:"供应链和零部件企业需求大",careerPath:"汽车工程师/整车测试工程师",salary:"8-15k"},
+            low: {verdict:"可选",    reason:"汽修技术和4S店有岗位",careerPath:"汽车维修技师/4S店技术员",salary:"5-8k"}}},
+  "physics":              { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校物理可转量化金融/半导体/AI研究",careerPath:"量化研究员/半导体工程师",salary:"15-30k"},
+            mid: {verdict:"推荐",    reason:"读研可扩展就业方向，教师需求稳定",careerPath:"中学物理教师/技术研发",salary:"6-10k"},
+            low: {verdict:"可选",    reason:"就业面窄，转行能力依赖数理基础",careerPath:"教师/技术员",salary:"5-8k"}}},
+  "math":                 { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"强烈推荐",reason:"顶校数学=量化金融/AI研究的直通车",careerPath:"量化研究员/AI算法工程师",salary:"20-40k"},
+            mid: {verdict:"推荐",    reason:"中学数学教师或读研转行均可行",careerPath:"数据分析师/中学教师",salary:"7-12k"},
+            low: {verdict:"可选",    reason:"教师或考公是主要出路",careerPath:"教师/银行柜员",salary:"5-8k"}}},
+  "statistics":           { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"强烈推荐",reason:"顶校统计直通量化/大数据/精算",careerPath:"精算师/量化分析师",salary:"18-35k"},
+            mid: {verdict:"推荐",    reason:"数据分析需求旺盛，各行业可进",careerPath:"数据分析师/统计员",salary:"8-14k"},
+            low: {verdict:"推荐",    reason:"各行业数据分析岗需求稳定",careerPath:"数据分析助理/质检员",salary:"6-9k"}}},
+  "biotech":              { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"生物制药/基因检测方向有高薪",careerPath:"生物研发工程师/CRA",salary:"12-20k"},
+            mid: {verdict:"推荐",    reason:"制药CRO和检验检疫需求稳定",careerPath:"实验室研究员/CRO专员",salary:"7-12k"},
+            low: {verdict:"可选",    reason:"基础实验岗有需求但薪资低",careerPath:"实验室技术员/质控员",salary:"5-8k"}}},
+  "applied-chem":         { schoolDep:"low",    tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校应化可进石化/精细化工研发",careerPath:"化学研发工程师/工艺工程师",salary:"10-18k"},
+            mid: {verdict:"推荐",    reason:"化工行业用量大，就业稳定",careerPath:"化工工程师/分析化学师",salary:"6-10k"},
+            low: {verdict:"推荐",    reason:"化工企业和检测机构需求量大，普通院校也可就业",careerPath:"化学检测员/实验员",salary:"5-8k"}}},
+  "geography":            { schoolDep:"low",    tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"GIS+自然资源方向有政策支撑",careerPath:"GIS工程师/规划研究员",salary:"8-14k"},
+            mid: {verdict:"推荐",    reason:"地理教师和GIS岗需求稳定",careerPath:"中学地理教师/GIS专员",salary:"6-10k"},
+            low: {verdict:"推荐",    reason:"地理教师需求有保障，师范方向实用",careerPath:"中学教师/测绘员",salary:"5-8k"}}},
+  "marine-science":       { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校可进科研院所，海洋强国战略加持",careerPath:"海洋科学研究员/海洋工程师",salary:"10-16k"},
+            mid: {verdict:"可选",    reason:"就业地域集中在沿海，岗位有限",careerPath:"海洋监测员/环评员",salary:"6-10k"},
+            low: {verdict:"慎选",    reason:"就业面窄，地域限制强",careerPath:"海洋数据采集员",salary:"5-7k"}}},
+  "psychology":           { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校心理可进互联网UXR或科研方向",careerPath:"UXR用户研究员/心理咨询师",salary:"10-18k"},
+            mid: {verdict:"推荐",    reason:"企业EAP和学校心理教师需求增长",careerPath:"心理咨询师/HR专员",salary:"6-10k"},
+            low: {verdict:"可选",    reason:"学校心理教师岗是稳定出路",careerPath:"学校心理教师/心理援助员",salary:"5-8k"}}},
+  "astronomy":            { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"可选",    reason:"极小众，科研岗位稀少，但数理功底强可转行",careerPath:"天文研究员/量化金融",salary:"12-25k"},
+            mid: {verdict:"可选",    reason:"转行需学习成本，数理优势可转数据科学",careerPath:"数据分析师/教师",salary:"6-10k"},
+            low: {verdict:"慎选",    reason:"就业极窄，普通院校资源弱，转行也难",careerPath:"教师/数据录入员",salary:"5-7k"}}},
+  "chemistry":            { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校化学可进制药/新材料/石化研发",careerPath:"研发化学师/合成工程师",salary:"10-18k"},
+            mid: {verdict:"推荐",    reason:"化工制药检测需求稳定",careerPath:"化学分析师/QC工程师",salary:"6-10k"},
+            low: {verdict:"可选",    reason:"检测机构和工厂岗有需求",careerPath:"检测员/化工操作员",salary:"5-8k"}}},
+  "ecology":              { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"生态修复和碳汇方向有政策资金",careerPath:"生态规划师/碳汇评估工程师",salary:"8-15k"},
+            mid: {verdict:"可选",    reason:"科研和环评是主要出路",careerPath:"环保工程师/科研助理",salary:"5-8k"},
+            low: {verdict:"慎选",    reason:"就业面很窄，非师范方向出路少",careerPath:"环保监测员/教师",salary:"5-7k"}}},
+  "atmospheric-science":  { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"气象局和航空气象有国家编制，竞争小",careerPath:"气象研究员/航空气象预报员",salary:"8-15k"},
+            mid: {verdict:"推荐",    reason:"气象编制岗稳定，考公机会好",careerPath:"气象预报员/气候分析师",salary:"6-10k"},
+            low: {verdict:"可选",    reason:"基层气象站岗位条件艰苦但稳定",careerPath:"气象观测员/数据员",salary:"5-8k"}}},
+  "law":                  { schoolDep:"high",   tianKeng:false, peiTi:"行政管理",
+    tiers:{ high:{verdict:"强烈推荐",reason:"985法学+法考=一线所或大厂法务",careerPath:"律师/公司法务/仲裁员",salary:"15-30k"},
+            mid: {verdict:"推荐",    reason:"法考通过率决定命运，二线律所或体制内可行",careerPath:"基层律师/政府法务",salary:"7-12k"},
+            low: {verdict:"慎选",    reason:"普通院校法考通过率低，法律岗越来越重视出身",careerPath:"法律助理/合规专员",salary:"4-7k"}}},
+  "finance":              { schoolDep:"high",   tianKeng:false, peiTi:"经济学",
+    tiers:{ high:{verdict:"强烈推荐",reason:"985金融=顶级投行/基金直通车",careerPath:"投资银行分析师/基金经理",salary:"20-40k"},
+            mid: {verdict:"推荐",    reason:"国有银行和保险公司需求稳定",careerPath:"银行客户经理/理财规划师",salary:"8-14k"},
+            low: {verdict:"慎选",    reason:"金融销售压力大，学历天花板明显",careerPath:"银行柜员/保险代理人",salary:"5-8k"}}},
+  "accounting":           { schoolDep:"medium", tianKeng:false, peiTi:"税务学",
+    tiers:{ high:{verdict:"推荐",    reason:"顶校会计+CPA=四大/头部企业CFO通道",careerPath:"四大审计师/企业财务总监",salary:"10-20k"},
+            mid: {verdict:"推荐",    reason:"CPA是竞争力关键，各行业都需要",careerPath:"会计/审计助理/税务专员",salary:"6-10k"},
+            low: {verdict:"可选",    reason:"AI代替基础账务岗，需靠证书+业务理解突围",careerPath:"出纳/财务助理",salary:"5-7k"}}},
+  "economics":            { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校经济可转量化/政策研究",careerPath:"经济分析师/政策研究员",salary:"10-20k"},
+            mid: {verdict:"推荐",    reason:"考公和银行是主要出路",careerPath:"政府经济分析岗/银行客户经理",salary:"6-10k"},
+            low: {verdict:"可选",    reason:"就业面较窄，需要搭配其他技能",careerPath:"银行柜员/统计员",salary:"5-7k"}}},
+  "international-trade":  { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校外贸+外语能力可进跨国企业",careerPath:"跨境贸易专员/外贸总监",salary:"10-18k"},
+            mid: {verdict:"推荐",    reason:"出口导向企业需求稳定，跨境电商是新方向",careerPath:"外贸业务员/跨境电商运营",salary:"6-10k"},
+            low: {verdict:"可选",    reason:"跨境电商降低了门槛，但薪资受限",careerPath:"外贸跟单员/电商运营助理",salary:"5-8k"}}},
+  "financial-eng":        { schoolDep:"high",   tianKeng:false, peiTi:"数量经济学",
+    tiers:{ high:{verdict:"强烈推荐",reason:"985金工=量化私募最爱，薪资顶尖",careerPath:"量化研究员/衍生品交易员",salary:"25-60k"},
+            mid: {verdict:"推荐",    reason:"金融数据分析和风控岗需求稳定",careerPath:"风控分析师/金融数据工程师",salary:"10-18k"},
+            low: {verdict:"不推荐",  reason:"量化门槛极高，普通院校毕业难以入行",careerPath:"银行助理/金融销售",salary:"5-8k"}}},
+  "business-admin":       { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校MBA+管理咨询是高薪路线",careerPath:"管理咨询顾问/企业战略规划",salary:"12-22k"},
+            mid: {verdict:"推荐",    reason:"各行业都需要管理人才，通用性强",careerPath:"企业中层管理/运营经理",salary:"7-12k"},
+            low: {verdict:"可选",    reason:"通用但普通，需要业务专长支撑",careerPath:"基层管理/行政专员",salary:"5-8k"}}},
+  "marketing":            { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校+数字营销技能=品牌/咨询公司高薪",careerPath:"品牌策略总监/营销总监",salary:"12-22k"},
+            mid: {verdict:"推荐",    reason:"新媒体运营和增长黑客需求旺盛",careerPath:"数字营销经理/增长运营",salary:"7-12k"},
+            low: {verdict:"可选",    reason:"需要实操技能，互联网营销工具是敲门砖",careerPath:"新媒体运营/电商运营",salary:"5-8k"}}},
+  "info-management":      { schoolDep:"high",   tianKeng:false, peiTi:"统计学",
+    tiers:{ high:{verdict:"推荐",    reason:"顶校信管+数据能力=互联网产品/数据岗",careerPath:"数据产品经理/IT项目经理",salary:"12-20k"},
+            mid: {verdict:"推荐",    reason:"企业信息化需求稳定，ERP等方向有需求",careerPath:"信息化专员/IT业务分析师",salary:"7-12k"},
+            low: {verdict:"可选",    reason:"岗位通用但竞争力有限，需要补技术短板",careerPath:"IT运维/系统管理员",salary:"5-8k"}}},
+  "big-data-mgmt":        { schoolDep:"high",   tianKeng:false, peiTi:"统计学",
+    tiers:{ high:{verdict:"推荐",    reason:"顶校大数据=技术+管理复合型人才",careerPath:"大数据架构师/数据产品经理",salary:"15-25k"},
+            mid: {verdict:"可选",    reason:"普通院校课程质量参差不齐，需自学补足",careerPath:"大数据分析师/ETL工程师",salary:"7-12k"},
+            low: {verdict:"不推荐",  reason:"学不到核心技术，证书含金量低，就业竞争力差",careerPath:"IT支持/数据录入",salary:"5-7k"}}},
+  "journalism":           { schoolDep:"medium", tianKeng:true,  peiTi:null,
+    tiers:{ high:{verdict:"慎选",    reason:"AI正在替代内容生产，媒体行业大幅裁员",careerPath:"新媒体内容创作者/媒体产品经理",salary:"6-12k"},
+            mid: {verdict:"慎选",    reason:"传统媒体衰落，新媒体内卷严重",careerPath:"记者/编辑/内容运营",salary:"5-8k"},
+            low: {verdict:"不推荐",  reason:"天坑+普通院校平台弱，AI替代快",careerPath:"内容审核/文案助手",salary:"4-6k"}}},
+  "chinese-lit":          { schoolDep:"low",    tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校中文可进出版/文化产业或考公考编",careerPath:"编剧/文化产业管理/教师",salary:"8-14k"},
+            mid: {verdict:"推荐",    reason:"语文教师需求稳定，考公有优势",careerPath:"语文教师/编辑/公务员",salary:"6-10k"},
+            low: {verdict:"推荐",    reason:"教师和考公是主流，职业稳定",careerPath:"语文教师/文案专员",salary:"5-8k"}}},
+  "english":              { schoolDep:"medium", tianKeng:true,  peiTi:null,
+    tiers:{ high:{verdict:"慎选",    reason:"AI翻译替代速度很快，外语类专业整体在贬值",careerPath:"涉外法律/跨文化顾问/外交",salary:"8-14k"},
+            mid: {verdict:"慎选",    reason:"翻译岗快速萎缩，需要转复合型技能",careerPath:"外贸业务员/翻译/教师",salary:"5-8k"},
+            low: {verdict:"不推荐",  reason:"AI替代+普通院校外语质量差，双重打击",careerPath:"商务助理/翻译助手",salary:"4-6k"}}},
+  "sociology":            { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校社会学可转政策研究/用户研究",careerPath:"社会研究员/用户洞察分析师",salary:"8-15k"},
+            mid: {verdict:"可选",    reason:"考公和NGO是主要出路",careerPath:"公务员/社会工作师/记者",salary:"6-9k"},
+            low: {verdict:"慎选",    reason:"就业面窄，考公竞争激烈",careerPath:"社区工作者/行政助理",salary:"5-7k"}}},
+  "animation":            { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校动画+AI工具=影视/游戏高薪岗",careerPath:"AI动画师/游戏美术总监",salary:"10-18k"},
+            mid: {verdict:"推荐",    reason:"游戏和影视动画需求持续",careerPath:"游戏美术/动画制作人",salary:"6-10k"},
+            low: {verdict:"可选",    reason:"AI工具拉低了门槛，需要有特色风格竞争",careerPath:"动画外包/视觉设计",salary:"4-8k"}}},
+  "digital-media":        { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校数媒+技术能力=XR/互动媒体高薪",careerPath:"XR开发工程师/交互设计总监",salary:"10-18k"},
+            mid: {verdict:"推荐",    reason:"数字内容创作需求持续增长",careerPath:"UI/UX设计师/内容创作者",salary:"6-10k"},
+            low: {verdict:"可选",    reason:"需要技术+设计双重能力才有竞争力",careerPath:"视频剪辑/运营助理",salary:"5-7k"}}},
+  "hr-mgmt":              { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校HR可进咨询/互联网头部企业HRBP",careerPath:"HRBP/人才管理顾问",salary:"10-18k"},
+            mid: {verdict:"推荐",    reason:"企业HR是刚需岗位，各行业均有需求",careerPath:"HR专员/人力资源经理",salary:"6-10k"},
+            low: {verdict:"可选",    reason:"基础招聘岗被AI替代快，需要转型HRBP",careerPath:"招聘专员/薪酬专员",salary:"5-7k"}}},
+  "ecommerce":            { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校+数据运营能力=电商平台战略岗",careerPath:"电商总监/跨境电商战略",salary:"12-20k"},
+            mid: {verdict:"强烈推荐",reason:"实操能力>学历，中分段学生发展空间大",careerPath:"电商运营/直播运营",salary:"7-14k"},
+            low: {verdict:"推荐",    reason:"操作能力可弥补学历不足，实战是关键",careerPath:"电商助理/直播主播",salary:"5-8k"}}},
+  "public-finance":       { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校公共财政可进财政局/国有银行",careerPath:"财政局公务员/国有银行研究员",salary:"8-14k"},
+            mid: {verdict:"推荐",    reason:"考公财政局或银行路线可行",careerPath:"财政局工作人员/银行助理",salary:"6-10k"},
+            low: {verdict:"可选",    reason:"考公竞争激烈，需靠证书弥补",careerPath:"银行柜员/财务助理",salary:"5-7k"}}},
+  "taxation":             { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校税务可进四大税务/税务局",careerPath:"税务师/四大税务顾问",salary:"10-18k"},
+            mid: {verdict:"推荐",    reason:"税务师证书是关键竞争力",careerPath:"税务专员/企业税务经理",salary:"7-12k"},
+            low: {verdict:"推荐",    reason:"税务岗需求稳定，考税务师资格证可提升",careerPath:"税务专员/财税助理",salary:"5-8k"}}},
+  "insurance":            { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校精算+数学背景=保险科技高薪",careerPath:"精算师/保险产品总监",salary:"12-22k"},
+            mid: {verdict:"推荐",    reason:"寿险/财险公司和互联网保险需求稳定",careerPath:"精算师/保险产品经理",salary:"7-12k"},
+            low: {verdict:"可选",    reason:"销售导向强，底薪低，需要有良好的人脉资源",careerPath:"保险客服/核保员",salary:"5-8k"}}},
+  "public-admin":         { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校公管可进政策咨询/国企管理岗",careerPath:"政府项目经理/公共政策研究员",salary:"8-14k"},
+            mid: {verdict:"推荐",    reason:"考公是主流，公管学科有天然优势",careerPath:"公务员/事业单位管理",salary:"6-10k"},
+            low: {verdict:"推荐",    reason:"考公本来就对学历宽容，公管考公性价比高",careerPath:"基层公务员/街道工作人员",salary:"5-8k"}}},
+  "public-admin-mgmt":    { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校行政管理可进国企/政策咨询",careerPath:"政策顾问/国企行政总监",salary:"8-14k"},
+            mid: {verdict:"推荐",    reason:"考公和事业单位是主流出路",careerPath:"行政管理人员/公务员",salary:"6-10k"},
+            low: {verdict:"推荐",    reason:"考公性价比高，行政类岗位对学校不挑剔",careerPath:"行政专员/公务员",salary:"5-8k"}}},
+  "tourism-mgmt":         { schoolDep:"low",    tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校酒店管理可进国际连锁，文旅地产有增长",careerPath:"五星酒店管理/文旅策划",salary:"8-16k"},
+            mid: {verdict:"可选",    reason:"文旅产业复苏，但行业整体薪资不高",careerPath:"旅游产品经理/酒店管理",salary:"5-9k"},
+            low: {verdict:"可选",    reason:"基层服务岗需求量大，但晋升靠个人积累",careerPath:"导游/酒店前台/客服",salary:"4-7k"}}},
+  "logistics-mgmt":       { schoolDep:"low",    tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校物流+数字化技能=供应链总监路线",careerPath:"供应链总监/物流科技总监",salary:"10-18k"},
+            mid: {verdict:"推荐",    reason:"电商物流和快递行业需求巨大",careerPath:"物流运营经理/供应链专员",salary:"7-12k"},
+            low: {verdict:"推荐",    reason:"物流行业需求量大，即使普通院校也可就业",careerPath:"物流专员/仓储管理员",salary:"5-8k"}}},
+  "political-science":    { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校政治学可进外交/政策研究/国际组织",careerPath:"外交官/国际机构员工",salary:"8-16k"},
+            mid: {verdict:"可选",    reason:"考公是主要出路，但竞争激烈",careerPath:"公务员/政府事务专员",salary:"6-9k"},
+            low: {verdict:"慎选",    reason:"就业面窄，普通院校资源弱",careerPath:"行政助理/基层公务员",salary:"5-7k"}}},
+  "social-work":          { schoolDep:"low",    tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校社工可进政策制定和NGO管理层",careerPath:"NGO总监/社区发展顾问",salary:"6-12k"},
+            mid: {verdict:"推荐",    reason:"社工岗需求在增长，政府购买服务项目增多",careerPath:"社工/社区服务机构主管",salary:"5-8k"},
+            low: {verdict:"推荐",    reason:"需求稳定且门槛不高，可结合考社工证",careerPath:"社区工作者/民政工作人员",salary:"4-7k"}}},
+  "international-politics":{ schoolDep:"high",  tianKeng:false, peiTi:"行政管理",
+    tiers:{ high:{verdict:"推荐",    reason:"顶校国政可进外交/国际机构/顶级咨询",careerPath:"外交官/国际关系研究员",salary:"10-18k"},
+            mid: {verdict:"可选",    reason:"就业面窄，考公是主要出路",careerPath:"政府机关/智库研究员",salary:"6-9k"},
+            low: {verdict:"慎选",    reason:"极度依赖学校资源，普通院校几乎无优势",careerPath:"行政助理/翻译",salary:"5-7k"}}},
+  "ideological-political-edu":{ schoolDep:"low",tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校思政+教师资格=体制内稳定路线",careerPath:"高校思政教师/党政机关",salary:"7-12k"},
+            mid: {verdict:"推荐",    reason:"思政教师和党政工作需求稳定",careerPath:"思政教师/辅导员/党政干部",salary:"5-9k"},
+            low: {verdict:"推荐",    reason:"对口考编考公有优势，学校档次影响小",careerPath:"思政教师/基层公务员",salary:"5-8k"}}},
+  "communication":        { schoolDep:"medium", tianKeng:true,  peiTi:null,
+    tiers:{ high:{verdict:"慎选",    reason:"传播行业AI替代快，媒体裁员持续",careerPath:"媒体产品经理/传播顾问",salary:"7-12k"},
+            mid: {verdict:"慎选",    reason:"传统传播岗萎缩，新媒体竞争激烈",careerPath:"新媒体编辑/公关专员",salary:"5-8k"},
+            low: {verdict:"不推荐",  reason:"天坑+普通院校资源弱，AI替代快",careerPath:"内容审核/客服",salary:"4-6k"}}},
+  "advertising":          { schoolDep:"medium", tianKeng:true,  peiTi:null,
+    tiers:{ high:{verdict:"慎选",    reason:"AI创意工具冲击严重，4A公司大幅裁员",careerPath:"创意策划/品牌顾问",salary:"7-12k"},
+            mid: {verdict:"慎选",    reason:"传统广告业萎缩，需向数字营销转型",careerPath:"数字广告优化师/创意设计师",salary:"5-8k"},
+            low: {verdict:"不推荐",  reason:"天坑+AI替代创意生产，出路有限",careerPath:"广告投手助理/内容审核",salary:"4-6k"}}},
+  "new-media":            { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校+新媒体运营技能=互联网企业品牌/内容岗",careerPath:"内容战略总监/品牌总监",salary:"10-18k"},
+            mid: {verdict:"强烈推荐",reason:"实操大于学历，内容能力强就有机会",careerPath:"新媒体运营/短视频创作者",salary:"6-12k"},
+            low: {verdict:"推荐",    reason:"操作能力弥补学历，创作能力是核心",careerPath:"新媒体运营助理/内容创作者",salary:"5-8k"}}},
+  "japanese":             { schoolDep:"medium", tianKeng:true,  peiTi:null,
+    tiers:{ high:{verdict:"慎选",    reason:"AI翻译快速普及，日语单一技能贬值严重",careerPath:"涉日法律/日企管理培训生",salary:"8-14k"},
+            mid: {verdict:"慎选",    reason:"日语+复合技能才有竞争力，单纯翻译岗在萎缩",careerPath:"日语翻译/日企商务",salary:"5-8k"},
+            low: {verdict:"不推荐",  reason:"AI翻译+普通院校日语质量差，双重打击",careerPath:"翻译助手/客服",salary:"4-6k"}}},
+  "french":               { schoolDep:"medium", tianKeng:true,  peiTi:null,
+    tiers:{ high:{verdict:"慎选",    reason:"法语使用场景窄，AI替代外语翻译速度快",careerPath:"外交/国际组织/法企管理",salary:"8-14k"},
+            mid: {verdict:"慎选",    reason:"法语就业面比日语更窄",careerPath:"翻译/法企销售",salary:"5-8k"},
+            low: {verdict:"不推荐",  reason:"市场极小+AI替代，就业极难",careerPath:"翻译助手/商务助理",salary:"4-5k"}}},
+  "german":               { schoolDep:"medium", tianKeng:true,  peiTi:null,
+    tiers:{ high:{verdict:"慎选",    reason:"德语科技类有一定价值，但AI影响不可忽视",careerPath:"德资企业技术顾问/翻译",salary:"8-14k"},
+            mid: {verdict:"慎选",    reason:"德语+工科复合才有价值，单纯德语岗少",careerPath:"翻译/德企商务",salary:"5-8k"},
+            low: {verdict:"不推荐",  reason:"市场小+AI替代+普通院校资源弱",careerPath:"翻译助手/商务助理",salary:"4-5k"}}},
+  "clinical-med":         { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"强烈推荐",reason:"985医学院8年本博连读=协和/三甲主任医师通道",careerPath:"三甲医院主任医师/医学研究员",salary:"25-60k"},
+            mid: {verdict:"推荐",    reason:"三甲规培+专科深耕可达稳定高收入",careerPath:"二三甲医院主治医师",salary:"12-25k"},
+            low: {verdict:"可选",    reason:"基层医疗机构有岗位，但晋升通道窄",careerPath:"基层医疗/社区医生",salary:"6-10k"}}},
+  "dentistry":            { schoolDep:"low",    tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"口腔医师执照高于学校因素，供不应求",careerPath:"口腔科主任医师/口腔医院院长",salary:"20-50k"},
+            mid: {verdict:"推荐",    reason:"口腔执照=基本保障，私立诊所机会多",careerPath:"口腔科医师/诊所合伙人",salary:"15-30k"},
+            low: {verdict:"推荐",    reason:"执照比学校重要，口腔医师缺口大",careerPath:"口腔医师/牙科诊所",salary:"10-25k"}}},
+  "pharmacy":             { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校药学可进制药研发/CRO头部岗",careerPath:"新药研发科学家/医药咨询顾问",salary:"12-22k"},
+            mid: {verdict:"推荐",    reason:"执业药师证书是核心竞争力",careerPath:"医院药师/药企质量专员",salary:"7-12k"},
+            low: {verdict:"可选",    reason:"药店岗需求量大，执业药师资格证可保底",careerPath:"药店药师/医院辅助药师",salary:"5-8k"}}},
+  "nursing":              { schoolDep:"low",    tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校护理可进三甲重症/特需/科研方向",careerPath:"三甲ICU护士/护理研究员",salary:"8-14k"},
+            mid: {verdict:"推荐",    reason:"护士执照需求稳定，三甲医院竞争激烈",careerPath:"三甲护士/地方医院护士长",salary:"6-10k"},
+            low: {verdict:"推荐",    reason:"护士缺口大，普通院校也可稳定就业",careerPath:"基层医疗护士/社区卫生护士",salary:"5-8k"}}},
+  "tcm":                  { schoolDep:"low",    tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校中医可进大型中医院科主任通道",careerPath:"中医主任医师/中医科研",salary:"12-22k"},
+            mid: {verdict:"推荐",    reason:"执照+口碑是关键，私人诊所机会多",careerPath:"中医主治医师/中医馆医师",salary:"8-15k"},
+            low: {verdict:"推荐",    reason:"执照比学校更重要，基层中医需求稳定",careerPath:"社区中医/中医馆医师",salary:"6-10k"}}},
+  "medical-imaging":      { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校影像+AI辅助诊断=三甲重点岗位",careerPath:"影像科主任/AI辅助诊断专家",salary:"15-25k"},
+            mid: {verdict:"推荐",    reason:"影像医师需求持续增长",careerPath:"影像科医师/影像技师",salary:"8-14k"},
+            low: {verdict:"推荐",    reason:"影像技师需求量大，执照是基础门槛",careerPath:"放射技师/超声技师",salary:"6-10k"}}},
+  "anesthesiology":       { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"强烈推荐",reason:"麻醉科医师极度紧缺，顶校直通三甲高薪",careerPath:"麻醉科主任医师/麻醉科研究员",salary:"20-40k"},
+            mid: {verdict:"强烈推荐",reason:"麻醉师缺口极大，任何层次院校都是刚需",careerPath:"麻醉科主治医师",salary:"12-25k"},
+            low: {verdict:"推荐",    reason:"执照+临床经验>学校，需求超过供给",careerPath:"麻醉科医师/疼痛科医师",salary:"8-15k"}}},
+  "medical-laboratory":   { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校检验+科研方向可进头部医院和IVD企业",careerPath:"检验科主任/IVD研发工程师",salary:"10-18k"},
+            mid: {verdict:"推荐",    reason:"医院检验岗和第三方检测需求稳定",careerPath:"检验技师/检验医师",salary:"7-12k"},
+            low: {verdict:"推荐",    reason:"第三方检验机构需求量大",careerPath:"检验技师/实验室技术员",salary:"5-8k"}}},
+  "preventive-medicine":  { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校预防医学可进CDC和卫生政策部门",careerPath:"CDC流行病学家/卫生政策研究员",salary:"10-18k"},
+            mid: {verdict:"推荐",    reason:"疾控系统考编有需求，健康管理方向新兴",careerPath:"疾控工作人员/健康管理师",salary:"7-12k"},
+            low: {verdict:"可选",    reason:"基层公卫岗有编制，但薪资低",careerPath:"社区卫生工作者/公卫助理",salary:"5-8k"}}},
+  "rehabilitation-therapy":{ schoolDep:"low",   tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"康复需求爆发，顶校可进三甲科研型康复中心",careerPath:"康复医学专家/康复中心主任",salary:"10-18k"},
+            mid: {verdict:"推荐",    reason:"康复师执照需求持续增长",careerPath:"康复治疗师/运动康复师",salary:"7-12k"},
+            low: {verdict:"推荐",    reason:"执照>学校，康复行业缺口巨大",careerPath:"康复治疗师/养老机构康复师",salary:"6-10k"}}},
+  "visual-design":        { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校设计+AI工具=品牌/互联网设计总监",careerPath:"创意总监/品牌设计总监",salary:"12-22k"},
+            mid: {verdict:"推荐",    reason:"需要强作品集，UI/UX方向薪资高",careerPath:"UI/UX设计师/平面设计师",salary:"6-12k"},
+            low: {verdict:"可选",    reason:"作品集>学历，但AI工具拉低了设计门槛",careerPath:"设计助理/视觉设计师",salary:"4-7k"}}},
+  "preschool-education":  { schoolDep:"low",    tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"高端幼教机构和早教品牌需要优质师资",careerPath:"高端幼儿园园长/早教研究员",salary:"7-12k"},
+            mid: {verdict:"可选",    reason:"出生率下降冲击，编制岗竞争激烈",careerPath:"幼儿园教师/早教顾问",salary:"5-8k"},
+            low: {verdict:"慎选",    reason:"出生率暴跌+幼儿园关停潮，就业前景不乐观",careerPath:"幼儿园教师/托育工作者",salary:"4-6k"}}},
+  "physical-education":   { schoolDep:"low",    tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"体育教师需求稳定，顶校可进高端健身/运动科学",careerPath:"体育教师/运动科学研究员",salary:"7-12k"},
+            mid: {verdict:"推荐",    reason:"体育中考权重提升保证需求",careerPath:"体育教师/教练",salary:"5-8k"},
+            low: {verdict:"推荐",    reason:"体育教师需求稳定，对学校要求不严格",careerPath:"体育教师/健身教练",salary:"5-7k"}}},
+  "special-education":    { schoolDep:"low",    tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校特教可进残障政策研究/高端干预机构",careerPath:"特殊教育专家/政策研究员",salary:"8-14k"},
+            mid: {verdict:"推荐",    reason:"特教岗需求增长，考编比普教容易",careerPath:"特殊教育教师/康复训练师",salary:"6-10k"},
+            low: {verdict:"推荐",    reason:"特教缺口大，执照+经验重于学校",careerPath:"特殊教育教师/自闭症干预师",salary:"5-8k"}}},
+  "educational-technology":{ schoolDep:"medium",tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校+AI教育产品技能=EdTech高薪岗",careerPath:"AI教育产品经理/学习分析工程师",salary:"12-20k"},
+            mid: {verdict:"可选",    reason:"传统教育技术岗被AI替代，需转向产品方向",careerPath:"在线教育内容设计师/教学设计师",salary:"6-10k"},
+            low: {verdict:"慎选",    reason:"传统岗位快速萎缩，普通院校资源弱",careerPath:"电教中心技术员/教育软件客服",salary:"5-7k"}}},
+  "agronomy":             { schoolDep:"low",    tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校农学+分子育种=种业研发核心岗",careerPath:"分子育种科学家/农业科研员",salary:"10-18k"},
+            mid: {verdict:"可选",    reason:"读研是基本需求，科研院所是主要出路",careerPath:"农技员/种业研发",salary:"6-10k"},
+            low: {verdict:"可选",    reason:"农技推广岗有政策支撑，但薪资低",careerPath:"基层农技员/农业局工作人员",salary:"5-7k"}}},
+  "veterinary-medicine":  { schoolDep:"low",    tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"宠物医院高端岗需要顶校资质",careerPath:"宠物医院院长/宠物外科专家",salary:"20-40k"},
+            mid: {verdict:"推荐",    reason:"宠物经济爆发，执照=高薪",careerPath:"宠物临床医师/宠物医院主治医师",salary:"12-25k"},
+            low: {verdict:"推荐",    reason:"执照>学校，宠物医师缺口大",careerPath:"宠物诊所医师/畜牧兽医",salary:"8-15k"}}},
+  "landscape-architecture":{ schoolDep:"medium",tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校园林+生态修复=政策方向高价值",careerPath:"景观规划师/生态修复总工",salary:"10-18k"},
+            mid: {verdict:"可选",    reason:"地产下行冲击，转生态修复方向是出路",careerPath:"景观设计师/施工监理",salary:"5-9k"},
+            low: {verdict:"慎选",    reason:"行业在转型阵痛期，普通院校资源不足",careerPath:"绿化施工员/图纸绘制员",salary:"4-6k"}}},
+  "food-science-engineering":{ schoolDep:"medium",tianKeng:false,peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校食品科学可进外资/新消费品牌研发",careerPath:"食品研发总监/功能性食品科学家",salary:"10-18k"},
+            mid: {verdict:"推荐",    reason:"食品质量安全需求稳定",careerPath:"食品研发工程师/QA工程师",salary:"6-10k"},
+            low: {verdict:"推荐",    reason:"食品行业用人量大，质检岗需求稳定",careerPath:"食品检验员/生产管理员",salary:"5-7k"}}},
+  "animal-science":       { schoolDep:"low",    tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校动物科学可进种业/营养研发",careerPath:"动物育种科学家/饲料研发工程师",salary:"8-15k"},
+            mid: {verdict:"可选",    reason:"大型牧场和饲料企业有需求",careerPath:"养殖技术员/饲料配方师",salary:"5-8k"},
+            low: {verdict:"可选",    reason:"规模化牧场用量大，但工作在农场",careerPath:"养殖场技术员/畜牧兽医员",salary:"4-7k"}}},
+  "aquaculture":          { schoolDep:"low",    tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"种苗和水产科技方向有高价值",careerPath:"水产种业科学家/水产技术总工",salary:"8-15k"},
+            mid: {verdict:"推荐",    reason:"沿海水产企业有稳定需求",careerPath:"水产养殖技术员/饲料配方师",salary:"5-8k"},
+            low: {verdict:"推荐",    reason:"水产行业人才缺口大，接受下基层就业有保障",careerPath:"水产养殖员/水质检测员",salary:"4-7k"}}},
+  "history":              { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校历史可进文博/传媒/高端咨询",careerPath:"博物馆研究员/历史类内容创作者",salary:"6-12k"},
+            mid: {verdict:"可选",    reason:"考公和教师是主要出路",careerPath:"历史教师/公务员",salary:"5-8k"},
+            low: {verdict:"慎选",    reason:"就业面极窄，普通院校历史就业困难",careerPath:"历史教师/文案",salary:"4-6k"}}},
+  "env-design":           { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校环艺可进室内设计/公共空间设计高薪岗",careerPath:"室内设计总监/空间品牌设计师",salary:"10-20k"},
+            mid: {verdict:"推荐",    reason:"需要强作品集，家装/商业设计需求稳定",careerPath:"室内设计师/陈列设计师",salary:"6-10k"},
+            low: {verdict:"可选",    reason:"作品集决定竞争力，AI出图拉低了门槛",careerPath:"助理设计师/方案绘制员",salary:"4-7k"}}},
+  "product-design":       { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校工业设计+AI工具=品牌/科技公司产品设计师",careerPath:"产品设计总监/体验设计师",salary:"12-20k"},
+            mid: {verdict:"推荐",    reason:"作品集>学历，需要建立设计思维",careerPath:"产品设计师/工业设计师",salary:"6-10k"},
+            low: {verdict:"可选",    reason:"AI设计工具拉低了门槛，需要有独特审美",careerPath:"助理产品设计师/外包设计",salary:"4-7k"}}},
+  "music-performance":    { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校音乐（中央/上音）+演出资源=稳定演艺路线",careerPath:"专业演奏家/音乐制作人",salary:"8-20k"},
+            mid: {verdict:"可选",    reason:"教培市场萎缩，演出路线竞争激烈",careerPath:"音乐教师/演艺人员",salary:"5-8k"},
+            low: {verdict:"慎选",    reason:"就业面窄，演艺市场竞争激烈",careerPath:"音乐老师/演艺助理",salary:"4-6k"}}},
+  "drama-film-lit":       { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校（北电/中戏）资源=行业入场券",careerPath:"编剧/影视导演/制片人",salary:"10-25k"},
+            mid: {verdict:"可选",    reason:"学校资源极重要，需要作品积累",careerPath:"剧本策划/影视宣发",salary:"5-9k"},
+            low: {verdict:"慎选",    reason:"行业极度资源化，普通院校进入困难",careerPath:"影视公司助理/场务",salary:"4-6k"}}},
+  "broadcasting-directing":{ schoolDep:"medium",tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校导演系+行业资源=主流媒体/视频平台",careerPath:"节目导演/视频平台内容总监",salary:"10-20k"},
+            mid: {verdict:"可选",    reason:"需要作品积累，新媒体方向有机会",careerPath:"节目助理导演/短视频导演",salary:"5-9k"},
+            low: {verdict:"慎选",    reason:"极度依赖人脉和作品，普通院校难以突围",careerPath:"视频剪辑/直播运营",salary:"4-6k"}}},
+  "photography":          { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校摄影+商业摄影技能=广告/时尚高薪",careerPath:"广告摄影总监/品牌视觉总监",salary:"10-20k"},
+            mid: {verdict:"可选",    reason:"作品集决定竞争力，自由摄影师可行",careerPath:"商业摄影师/活动摄影师",salary:"5-9k"},
+            low: {verdict:"慎选",    reason:"AI生成图像冲击严重，商业摄影竞争激烈",careerPath:"活动摄影/婚纱摄影助理",salary:"4-6k"}}},
+  "fashion-design":       { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校时装（东华/中央美院）=品牌设计岗",careerPath:"时装品牌设计总监/创意总监",salary:"10-20k"},
+            mid: {verdict:"可选",    reason:"作品集和实习经验决定竞争力",careerPath:"服装设计师/买手",salary:"5-8k"},
+            low: {verdict:"慎选",    reason:"AI设计工具冲击，快时尚外包压价",careerPath:"服装跟单员/设计助理",salary:"4-6k"}}},
+  "arts-crafts":          { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"顶校工艺美术+非遗方向=文旅/品牌高端岗",careerPath:"非遗文创总监/手工艺品牌创始人",salary:"8-18k"},
+            mid: {verdict:"可选",    reason:"传统手工艺市场小，需要转文创方向",careerPath:"文创设计师/工艺美术师",salary:"5-8k"},
+            low: {verdict:"慎选",    reason:"就业面窄，需要有创业精神才能走通",careerPath:"工艺美术员/文创产品助理",salary:"4-6k"}}},
+  "civil":                { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"大院大所首选985，央企基建项目有需求",careerPath:"建筑设计院总工/基建央企项目经理",salary:"10-20k"},
+            mid: {verdict:"推荐",    reason:"考证（一建/二建）是核心，稳定主流路线",careerPath:"施工单位工程师/监理工程师",salary:"7-12k"},
+            low: {verdict:"可选",    reason:"考证可保底，但晋升受限",careerPath:"施工现场管理/监理员",salary:"5-8k"}}},
+  "architecture":         { schoolDep:"medium", tianKeng:false, peiTi:null,
+    tiers:{ high:{verdict:"推荐",    reason:"一流建筑院校（同济/华南）=建筑师执照通道",careerPath:"执业建筑师/知名设计院",salary:"10-22k"},
+            mid: {verdict:"可选",    reason:"注册建筑师执照是关键，行业在转型",careerPath:"建筑设计师/施工图设计",salary:"6-10k"},
+            low: {verdict:"慎选",    reason:"地产下行+普通院校资源弱，就业压力大",careerPath:"施工员/绘图员",salary:"4-7k"}}}
+};
+
+function getChinaExposure(major) {
+  const adj = CHINA_ADJ[major.id];
+  const mod = adj ? adj.mod : 0;
+  return Math.round(Math.max(0, Math.min(10, major.aiExposure + mod)) * 10) / 10;
+}
+
+function getChinaReason(major) {
+  const adj = CHINA_ADJ[major.id];
+  return adj ? adj.reason : '';
+}
+
+// ===== STATE =====
+let currentView = 'home';
+let currentCategory = 'all';
+let currentTier = 'mid';
+let chartInstances = [];
+
+// ===== UTILITY =====
+function getExposureColor(score) {
+  if (score <= 3) return '#22c55e';
+  if (score <= 5) return '#84cc16';
+  if (score <= 7) return '#eab308';
+  if (score <= 8.5) return '#f97316';
+  return '#ef4444';
+}
+
+function getExposureLabel(score) {
+  if (score <= 3) return '低暴露';
+  if (score <= 5) return '中低暴露';
+  if (score <= 7) return '中等暴露';
+  if (score <= 8.5) return '高暴露';
+  return '极高暴露';
+}
+
+function disposeCharts() {
+  chartInstances.forEach(c => c.dispose());
+  chartInstances = [];
+}
+
+function getVerdictColor(verdict) {
+  const map = {'强烈推荐':'#22c55e','推荐':'#84cc16','可选':'#eab308','慎选':'#f97316','不推荐':'#ef4444'};
+  return map[verdict] || '#6b7280';
+}
+function getVerdictRank(verdict) {
+  const map = {'强烈推荐':5,'推荐':4,'可选':3,'慎选':2,'不推荐':1};
+  return map[verdict] || 0;
+}
+function getSchoolDepLabel(dep) {
+  const map = {'high':'学校决定命运','medium':'有影响可弥补','low':'执照/技能优先'};
+  return map[dep] || '';
+}
+function getSchoolDepColor(dep) {
+  const map = {'high':'#ef4444','medium':'#eab308','low':'#22c55e'};
+  return map[dep] || '#6b7280';
+}
+
+function selectTier(tier) {
+  currentTier = tier;
+  ['high','mid','low'].forEach(t => {
+    const btn = document.getElementById('tier-btn-' + t);
+    if (t === tier) {
+      const colors = {high:'border-green-500 bg-green-50 text-green-700', mid:'border-blue-500 bg-blue-50 text-blue-700', low:'border-orange-500 bg-orange-50 text-orange-700'};
+      btn.className = 'tier-btn flex-1 min-w-0 px-3 py-2.5 rounded-lg text-sm font-medium border-2 transition-all text-center ' + colors[t];
+    } else {
+      btn.className = 'tier-btn flex-1 min-w-0 px-3 py-2.5 rounded-lg text-sm font-medium border-2 transition-all text-center border-gray-200 text-gray-500 hover:border-gray-300';
+    }
+  });
+  filterMajors();
+}
+
+// ===== RENDER HOME =====
+function renderCategoryTabs() {
+  const container = document.getElementById('cat-tabs');
+  container.innerHTML = `<button class="tab-btn ${currentCategory === 'all' ? 'tab-active' : ''} px-4 py-2 text-sm whitespace-nowrap text-gray-600 hover:text-gray-900" data-cat="all" onclick="filterCategory('all', this)">全部</button>`;
+  DATA.categories.forEach(cat => {
+    const count = DATA.majors.filter(m => m.category === cat.id).length;
+    container.innerHTML += `<button class="tab-btn ${currentCategory === cat.id ? 'tab-active' : ''} px-4 py-2 text-sm whitespace-nowrap text-gray-600 hover:text-gray-900" data-cat="${cat.id}" onclick="filterCategory('${cat.id}', this)">${cat.name}<span class="ml-1 text-xs text-gray-400">${count}</span></button>`;
+  });
+}
+
+function filterCategory(catId, btn) {
+  currentCategory = catId;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
+  if (btn) btn.classList.add('tab-active');
+  filterMajors();
+}
+
+function filterMajors() {
+  const search = document.getElementById('search-input').value.trim().toLowerCase();
+  const grid = document.getElementById('major-grid');
+  const filtered = DATA.majors.filter(m => {
+    const catMatch = currentCategory === 'all' || m.category === currentCategory;
+    const searchMatch = !search || m.name.toLowerCase().includes(search);
+    return catMatch && searchMatch;
+  }).sort((a, b) => {
+    const st_a = SCORE_TIERS[a.id], st_b = SCORE_TIERS[b.id];
+    const ra = st_a ? getVerdictRank(st_a.tiers[currentTier].verdict) : 0;
+    const rb = st_b ? getVerdictRank(st_b.tiers[currentTier].verdict) : 0;
+    if (rb !== ra) return rb - ra;
+    return getChinaExposure(b) - getChinaExposure(a);
+  });
+  grid.innerHTML = filtered.map(m => {
+    const chinaExp = getChinaExposure(m);
+    const color = getExposureColor(chinaExp);
+    const catName = DATA.categories.find(c => c.id === m.category)?.name || '';
+    const pct = (chinaExp / 10) * 100;
+    const st = SCORE_TIERS[m.id];
+    const tierData = st ? st.tiers[currentTier] : null;
+    const verdict = tierData ? tierData.verdict : null;
+    const verdictColor = verdict ? getVerdictColor(verdict) : '#6b7280';
+    const tianKeng = st && st.tianKeng;
+    const schoolDep = st ? st.schoolDep : null;
+    const peiTi = st ? st.peiTi : null;
+    return `
+      <div class="bg-white rounded-xl p-5 shadow-sm card-hover cursor-pointer border border-gray-100" onclick="showDetail('${m.id}')">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs text-gray-400">${catName}</span>
+          <div class="flex gap-1 flex-wrap justify-end">
+            ${tianKeng ? `<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-600">⚠ 天坑</span>` : ''}
+            ${verdict ? `<span class="text-xs font-medium px-2 py-0.5 rounded-full" style="background:${verdictColor}20;color:${verdictColor}">${verdict}</span>` : ''}
+          </div>
+        </div>
+        <h3 class="font-semibold text-gray-900 mb-1">${m.name}</h3>
+        ${tierData ? `<p class="text-xs mb-2" style="color:${verdictColor}">${tierData.careerPath} · ${tierData.salary}</p>` : ''}
+        <div class="mb-3">
+          <div class="flex justify-between text-xs text-gray-500 mb-1">
+            <span>AI冲击</span>
+            <span style="color:${color}">${chinaExp}/10</span>
+          </div>
+          <div class="w-full bg-gray-100 rounded-full h-1.5">
+            <div class="exposure-bar rounded-full h-1.5" style="width:${pct}%;background:${color}"></div>
+          </div>
+        </div>
+        ${schoolDep === 'high' ? `<div class="text-xs text-red-500 mt-1">📌 学校层次影响大</div>` : ''}
+        ${peiTi ? `<div class="text-xs text-gray-400 mt-1">平替：${peiTi}</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+// ===== RENDER DETAIL =====
+function showDetail(id) {
+  const m = DATA.majors.find(x => x.id === id);
+  if (!m) return;
+  disposeCharts();
+  currentView = 'detail';
+  document.getElementById('home-view').classList.add('hidden');
+  document.getElementById('compare-view').classList.add('hidden');
+  document.getElementById('detail-view').classList.remove('hidden');
+  window.scrollTo(0, 0);
+
+  const chinaExp = getChinaExposure(m);
+  const chinaReason = getChinaReason(m);
+  const color = getExposureColor(chinaExp);
+  const label = getExposureLabel(chinaExp);
+  const globalColor = getExposureColor(m.aiExposure);
+  const catName = DATA.categories.find(c => c.id === m.category)?.name || '';
+  const diff = Math.round((chinaExp - m.aiExposure) * 10) / 10;
+  const diffLabel = diff === 0 ? '持平' : diff > 0 ? `+${diff} 高于全球` : `${diff} 低于全球`;
+  const diffColor = diff === 0 ? '#6b7280' : diff > 0 ? '#ef4444' : '#22c55e';
+
+  document.getElementById('detail-content').innerHTML = `
+    <div class="fade-in">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="text-sm text-gray-400">${catName}</span>
+        <h2 class="text-2xl font-bold text-gray-900">${m.name}</h2>
+        <span class="text-sm font-medium px-3 py-1 rounded-full" style="background:${color}20;color:${color}">${label} ${chinaExp}/10</span>
+      </div>
+
+      <!-- Charts -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <h3 class="text-sm font-semibold text-gray-500 mb-2 text-center">中国预测（2026-2031）</h3>
+          <div id="gauge-chart" style="width:100%;height:280px"></div>
+          <div class="flex justify-center gap-4 mt-2">
+            <div class="text-center">
+              <div class="text-xs text-gray-400">全球基准</div>
+              <div class="text-sm font-semibold" style="color:${globalColor}">${m.aiExposure}/10</div>
+            </div>
+            <div class="text-center">
+              <div class="text-xs text-gray-400">中国修正</div>
+              <div class="text-sm font-semibold" style="color:${diffColor}">${diffLabel}</div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <h3 class="text-sm font-semibold text-gray-500 mb-2 text-center">五维分析</h3>
+          <div id="radar-chart" style="width:100%;height:280px"></div>
+        </div>
+      </div>
+
+      ${chinaReason ? `<div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+        <h3 class="text-sm font-semibold text-amber-700 mb-1">中国市场修正依据</h3>
+        <p class="text-sm text-amber-800">${chinaReason}</p>
+      </div>` : ''}
+
+      <!-- Info Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <h3 class="text-base font-semibold text-red-600 mb-3">AI 正在替代什么</h3>
+          <ul class="space-y-2">${m.replacing.map(r => `<li class="flex items-start gap-2 text-sm text-gray-700"><span class="text-red-400 mt-0.5">●</span>${r}</li>`).join('')}</ul>
+        </div>
+        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <h3 class="text-base font-semibold text-green-600 mb-3">AI 短期内替代不了什么</h3>
+          <ul class="space-y-2">${m.notReplacing.map(r => `<li class="flex items-start gap-2 text-sm text-gray-700"><span class="text-green-400 mt-0.5">●</span>${r}</li>`).join('')}</ul>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
+        <h3 class="text-base font-semibold text-gray-700 mb-3">就业需求趋势</h3>
+        <p class="text-sm text-gray-600 leading-relaxed">${m.demandTrend}</p>
+      </div>
+
+      ${EMPLOYMENT[m.id] ? `<div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
+        <h3 class="text-base font-semibold text-purple-600 mb-4">就业方向地图</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div class="bg-purple-50 rounded-lg p-4">
+            <div class="text-xs text-purple-500 font-medium mb-2">热门城市</div>
+            <div class="flex flex-wrap gap-1.5">${EMPLOYMENT[m.id].hotCities.map(c => `<span class="text-sm bg-white px-2.5 py-1 rounded-full border border-purple-200 text-purple-700">${c}</span>`).join('')}</div>
+          </div>
+          <div class="bg-indigo-50 rounded-lg p-4">
+            <div class="text-xs text-indigo-500 font-medium mb-2">热门行业</div>
+            <div class="flex flex-wrap gap-1.5">${EMPLOYMENT[m.id].hotIndustries.map(i => `<span class="text-sm bg-white px-2.5 py-1 rounded-full border border-indigo-200 text-indigo-700">${i}</span>`).join('')}</div>
+          </div>
+          <div class="bg-blue-50 rounded-lg p-4">
+            <div class="text-xs text-blue-500 font-medium mb-2">热门职位</div>
+            <div class="flex flex-wrap gap-1.5">${EMPLOYMENT[m.id].hotJobs.map(j => `<span class="text-sm bg-white px-2.5 py-1 rounded-full border border-blue-200 text-blue-700">${j}</span>`).join('')}</div>
+          </div>
+          <div class="bg-green-50 rounded-lg p-4">
+            <div class="text-xs text-green-500 font-medium mb-2">应届月薪范围</div>
+            <span class="text-lg font-bold text-green-700">${EMPLOYMENT[m.id].avgSalary}</span>
+          </div>
+          <div class="bg-amber-50 rounded-lg p-4 sm:col-span-2">
+            <div class="text-xs text-amber-500 font-medium mb-2">代表性雇主</div>
+            <div class="flex flex-wrap gap-1.5">${EMPLOYMENT[m.id].topEmployers.map(e => `<span class="text-sm bg-white px-2.5 py-1 rounded-full border border-amber-200 text-amber-700">${e}</span>`).join('')}</div>
+          </div>
+        </div>
+      </div>` : ''}
+
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
+        <h3 class="text-base font-semibold text-blue-600 mb-3">学这个专业，应该往哪个方向发力</h3>
+        <ul class="space-y-3">${m.directions.map((d, i) => `<li class="flex items-start gap-3 text-sm text-gray-700"><span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">${i + 1}</span>${d}</li>`).join('')}</ul>
+      </div>
+
+      <div class="rounded-xl p-6 border-2" style="border-color:${color}30;background:${color}08">
+        <h3 class="text-base font-semibold text-gray-700 mb-2">一句话总结</h3>
+        <p class="text-sm text-gray-700 leading-relaxed">${m.summary}</p>
+      </div>
+
+      ${SCORE_TIERS[m.id] ? (() => {
+        const st = SCORE_TIERS[m.id];
+        const tierLabels = {high:'600+ 分（985/211）', mid:'500–600 分（普通一本/二本）', low:'500分以下（普通二本及以下）'};
+        const curTierData = st.tiers[currentTier];
+        const curVColor = getVerdictColor(curTierData.verdict);
+        return `
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mt-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-base font-semibold text-gray-800">按分数段看出路</h3>
+          ${st.tianKeng ? `<span class="text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-600">⚠ 天坑预警</span>` : ''}
+        </div>
+        <div class="flex gap-2 mb-4 p-3 rounded-lg" style="background:${curVColor}10;border:1px solid ${curVColor}30">
+          <div>
+            <div class="text-xs text-gray-500 mb-1">你当前分数段（${tierLabels[currentTier].split('（')[0]}）</div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-sm font-bold px-3 py-1 rounded-full" style="background:${curVColor}20;color:${curVColor}">${curTierData.verdict}</span>
+              <span class="text-sm text-gray-700">${curTierData.careerPath}</span>
+              <span class="text-sm font-semibold" style="color:${curVColor}">${curTierData.salary}</span>
+            </div>
+            <p class="text-xs text-gray-500 mt-1.5">${curTierData.reason}</p>
+          </div>
+        </div>
+        <div class="text-xs text-gray-400 mb-2 font-medium">三个分数段完整对比</div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr class="bg-gray-50">
+                <th class="text-left text-xs text-gray-500 font-medium px-3 py-2 border border-gray-100">分数段</th>
+                <th class="text-left text-xs text-gray-500 font-medium px-3 py-2 border border-gray-100">推荐度</th>
+                <th class="text-left text-xs text-gray-500 font-medium px-3 py-2 border border-gray-100">职业路径</th>
+                <th class="text-left text-xs text-gray-500 font-medium px-3 py-2 border border-gray-100 hidden md:table-cell">说明</th>
+                <th class="text-left text-xs text-gray-500 font-medium px-3 py-2 border border-gray-100">薪资</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${['high','mid','low'].map(t => {
+                const td = st.tiers[t];
+                const vc = getVerdictColor(td.verdict);
+                const isActive = t === currentTier;
+                const rowBg = isActive ? `style="background:${vc}08"` : '';
+                const labels = {high:'600+', mid:'500–600', low:'<500'};
+                return `<tr ${rowBg} class="${isActive ? 'font-medium' : ''}">
+                  <td class="px-3 py-2 border border-gray-100 text-xs text-gray-600 whitespace-nowrap">${labels[t]}</td>
+                  <td class="px-3 py-2 border border-gray-100 whitespace-nowrap"><span class="text-xs px-2 py-0.5 rounded-full" style="background:${vc}20;color:${vc}">${td.verdict}</span></td>
+                  <td class="px-3 py-2 border border-gray-100 text-xs text-gray-700">${td.careerPath}</td>
+                  <td class="px-3 py-2 border border-gray-100 text-xs text-gray-500 hidden md:table-cell">${td.reason}</td>
+                  <td class="px-3 py-2 border border-gray-100 text-xs font-semibold whitespace-nowrap" style="color:${vc}">${td.salary}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
+          <span>学校影响：<span class="font-medium" style="color:${getSchoolDepColor(st.schoolDep)}">${getSchoolDepLabel(st.schoolDep)}</span></span>
+          ${st.peiTi ? `<span>低分平替专业：<span class="font-medium text-blue-600">${st.peiTi}</span></span>` : ''}
+        </div>
+      </div>`;
+      })() : ''}
+
+    </div>`;
+
+  // Init gauge
+  const gauge = echarts.init(document.getElementById('gauge-chart'));
+  chartInstances.push(gauge);
+  gauge.setOption({
+    series: [{
+      type: 'gauge', min: 0, max: 10, splitNumber: 10, startAngle: 200, endAngle: -20,
+      axisLine: { lineStyle: { width: 18, color: [[0.3, '#22c55e'], [0.5, '#84cc16'], [0.7, '#eab308'], [0.85, '#f97316'], [1, '#ef4444']] } },
+      axisTick: { show: false },
+      splitLine: { length: 8, lineStyle: { color: '#fff', width: 2 } },
+      axisLabel: { distance: 25, fontSize: 11, color: '#999' },
+      pointer: { width: 4, length: '60%', itemStyle: { color: color } },
+      anchor: { show: true, size: 12, itemStyle: { borderWidth: 2, borderColor: color } },
+      detail: { formatter: '{value}', fontSize: 32, fontWeight: 'bold', color: color, offsetCenter: [0, '70%'] },
+      title: { show: false },
+      data: [{ value: chinaExp }]
+    }]
+  });
+
+  // Init radar
+  const radar = echarts.init(document.getElementById('radar-chart'));
+  chartInstances.push(radar);
+  radar.setOption({
+    radar: {
+      indicator: [
+        { name: '自动化风险', max: 10 },
+        { name: '需求增长', max: 10 },
+        { name: '薪资潜力', max: 10 },
+        { name: '入行门槛', max: 10 },
+        { name: 'AI协作机会', max: 10 }
+      ],
+      shape: 'circle',
+      splitArea: { areaStyle: { color: ['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8'].reverse().map(c => c + '30') } },
+      axisName: { color: '#64748b', fontSize: 12 }
+    },
+    series: [{
+      type: 'radar',
+      data: [{
+        value: [m.radar.automationRisk, m.radar.demandGrowth, m.radar.salaryPotential, m.radar.entryBarrier, m.radar.aiCollaboration],
+        name: m.name,
+        areaStyle: { color: color + '30' },
+        lineStyle: { color: color, width: 2 },
+        itemStyle: { color: color }
+      }]
+    }]
+  });
+}
+
+// ===== COMPARE =====
+function toggleCompare() {
+  disposeCharts();
+  if (currentView === 'compare') { showHome(); return; }
+  currentView = 'compare';
+  document.getElementById('home-view').classList.add('hidden');
+  document.getElementById('detail-view').classList.add('hidden');
+  document.getElementById('compare-view').classList.remove('hidden');
+  document.getElementById('compare-btn').classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+  document.getElementById('compare-btn').classList.remove('hover:bg-gray-100');
+  window.scrollTo(0, 0);
+
+  // Populate selects
+  ['compare-a', 'compare-b'].forEach(selId => {
+    const sel = document.getElementById(selId);
+    sel.innerHTML = '<option value="">选择专业</option>';
+    DATA.categories.forEach(cat => {
+      const majors = DATA.majors.filter(m => m.category === cat.id);
+      if (majors.length === 0) return;
+      const group = document.createElement('optgroup');
+      group.label = cat.name;
+      majors.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.name;
+        group.appendChild(opt);
+      });
+      sel.appendChild(group);
+    });
+  });
+  document.getElementById('compare-content').innerHTML = '<p class="text-center text-gray-400 py-12">请选择两个专业进行对比</p>';
+}
+
+function renderCompare() {
+  const idA = document.getElementById('compare-a').value;
+  const idB = document.getElementById('compare-b').value;
+  if (!idA || !idB) {
+    document.getElementById('compare-content').innerHTML = '<p class="text-center text-gray-400 py-12">请选择两个专业进行对比</p>';
+    return;
+  }
+  disposeCharts();
+  const a = DATA.majors.find(x => x.id === idA);
+  const b = DATA.majors.find(x => x.id === idB);
+  const colorA = '#3b82f6', colorB = '#f97316';
+  const chinaExpA = getChinaExposure(a), chinaExpB = getChinaExposure(b);
+
+  document.getElementById('compare-content').innerHTML = `
+    <div class="fade-in">
+      <!-- Gauges -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white rounded-xl p-6 shadow-sm border-2 border-blue-100 text-center">
+          <h3 class="font-semibold text-blue-600 mb-1">${a.name}</h3>
+          <div id="gauge-a" style="width:100%;height:220px"></div>
+          <p class="text-xs text-gray-400 mt-1">全球基准 ${a.aiExposure}/10</p>
+        </div>
+        <div class="bg-white rounded-xl p-6 shadow-sm border-2 border-orange-100 text-center">
+          <h3 class="font-semibold text-orange-600 mb-1">${b.name}</h3>
+          <div id="gauge-b" style="width:100%;height:220px"></div>
+          <p class="text-xs text-gray-400 mt-1">全球基准 ${b.aiExposure}/10</p>
+        </div>
+      </div>
+
+      <!-- Shared radar -->
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
+        <h3 class="text-sm font-semibold text-gray-500 mb-2 text-center">五维对比</h3>
+        <div id="radar-compare" style="width:100%;height:350px"></div>
+      </div>
+
+      <!-- Side by side cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white rounded-xl p-5 shadow-sm border-2 border-blue-100">
+          <h4 class="text-sm font-semibold text-red-600 mb-2">AI 正在替代什么</h4>
+          <ul class="space-y-1">${a.replacing.map(r => `<li class="text-xs text-gray-600 flex items-start gap-1"><span class="text-red-400">●</span>${r}</li>`).join('')}</ul>
+        </div>
+        <div class="bg-white rounded-xl p-5 shadow-sm border-2 border-orange-100">
+          <h4 class="text-sm font-semibold text-red-600 mb-2">AI 正在替代什么</h4>
+          <ul class="space-y-1">${b.replacing.map(r => `<li class="text-xs text-gray-600 flex items-start gap-1"><span class="text-red-400">●</span>${r}</li>`).join('')}</ul>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white rounded-xl p-5 shadow-sm border-2 border-blue-100">
+          <h4 class="text-sm font-semibold text-green-600 mb-2">AI 替代不了什么</h4>
+          <ul class="space-y-1">${a.notReplacing.map(r => `<li class="text-xs text-gray-600 flex items-start gap-1"><span class="text-green-400">●</span>${r}</li>`).join('')}</ul>
+        </div>
+        <div class="bg-white rounded-xl p-5 shadow-sm border-2 border-orange-100">
+          <h4 class="text-sm font-semibold text-green-600 mb-2">AI 替代不了什么</h4>
+          <ul class="space-y-1">${b.notReplacing.map(r => `<li class="text-xs text-gray-600 flex items-start gap-1"><span class="text-green-400">●</span>${r}</li>`).join('')}</ul>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white rounded-xl p-5 shadow-sm border-2 border-blue-100">
+          <h4 class="text-sm font-semibold text-blue-600 mb-2">发力方向</h4>
+          <ul class="space-y-1">${a.directions.map((d, i) => `<li class="text-xs text-gray-600 flex items-start gap-1"><span class="text-blue-400 font-bold">${i + 1}.</span>${d}</li>`).join('')}</ul>
+        </div>
+        <div class="bg-white rounded-xl p-5 shadow-sm border-2 border-orange-100">
+          <h4 class="text-sm font-semibold text-orange-600 mb-2">发力方向</h4>
+          <ul class="space-y-1">${b.directions.map((d, i) => `<li class="text-xs text-gray-600 flex items-start gap-1"><span class="text-orange-400 font-bold">${i + 1}.</span>${d}</li>`).join('')}</ul>
+        </div>
+      </div>
+
+      <!-- Summaries -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="rounded-xl p-5 bg-blue-50 border-2 border-blue-200">
+          <h4 class="text-sm font-semibold text-gray-700 mb-1">${a.name}</h4>
+          <p class="text-xs text-gray-600 leading-relaxed">${a.summary}</p>
+        </div>
+        <div class="rounded-xl p-5 bg-orange-50 border-2 border-orange-200">
+          <h4 class="text-sm font-semibold text-gray-700 mb-1">${b.name}</h4>
+          <p class="text-xs text-gray-600 leading-relaxed">${b.summary}</p>
+        </div>
+      </div>
+
+      <!-- Score tier comparison -->
+      ${(SCORE_TIERS[a.id] || SCORE_TIERS[b.id]) ? (() => {
+        const stA = SCORE_TIERS[a.id], stB = SCORE_TIERS[b.id];
+        const tierLabel = {high:'600+ 分',mid:'500–600 分',low:'500分以下'};
+        const rows = ['high','mid','low'].map(t => {
+          const tdA = stA ? stA.tiers[t] : null;
+          const tdB = stB ? stB.tiers[t] : null;
+          const vcA = tdA ? getVerdictColor(tdA.verdict) : '#6b7280';
+          const vcB = tdB ? getVerdictColor(tdB.verdict) : '#6b7280';
+          const isActive = t === currentTier;
+          return `<tr class="${isActive ? 'font-medium' : ''}">
+            <td class="px-3 py-2 border border-gray-100 text-xs text-gray-500 whitespace-nowrap">${tierLabel[t]}${isActive ? ' ◀' : ''}</td>
+            <td class="px-3 py-2 border border-gray-100">
+              ${tdA ? `<div><span class="text-xs px-2 py-0.5 rounded-full" style="background:${vcA}20;color:${vcA}">${tdA.verdict}</span><div class="text-xs text-gray-500 mt-1">${tdA.salary}</div></div>` : '<span class="text-xs text-gray-300">—</span>'}
+            </td>
+            <td class="px-3 py-2 border border-gray-100">
+              ${tdB ? `<div><span class="text-xs px-2 py-0.5 rounded-full" style="background:${vcB}20;color:${vcB}">${tdB.verdict}</span><div class="text-xs text-gray-500 mt-1">${tdB.salary}</div></div>` : '<span class="text-xs text-gray-300">—</span>'}
+            </td>
+          </tr>`;
+        }).join('');
+        return `<div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <h4 class="text-sm font-semibold text-gray-700 mb-3">按分数段推荐度对比</h4>
+          <table class="w-full text-sm border-collapse">
+            <thead><tr class="bg-gray-50">
+              <th class="text-left text-xs text-gray-500 font-medium px-3 py-2 border border-gray-100">分数段</th>
+              <th class="text-left text-xs text-blue-500 font-medium px-3 py-2 border border-gray-100">${a.name}</th>
+              <th class="text-left text-xs text-orange-500 font-medium px-3 py-2 border border-gray-100">${b.name}</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+      })() : ''}
+    </div>`;
+
+  // Gauge A
+  const gaugeOpt = (val, col) => ({
+    series: [{
+      type: 'gauge', min: 0, max: 10, splitNumber: 10, startAngle: 200, endAngle: -20,
+      axisLine: { lineStyle: { width: 14, color: [[0.3, '#22c55e'], [0.5, '#84cc16'], [0.7, '#eab308'], [0.85, '#f97316'], [1, '#ef4444']] } },
+      axisTick: { show: false }, splitLine: { length: 6, lineStyle: { color: '#fff', width: 2 } },
+      axisLabel: { distance: 20, fontSize: 10, color: '#999' },
+      pointer: { width: 3, length: '55%', itemStyle: { color: col } },
+      anchor: { show: true, size: 8, itemStyle: { borderWidth: 2, borderColor: col } },
+      detail: { formatter: '{value}', fontSize: 26, fontWeight: 'bold', color: col, offsetCenter: [0, '70%'] },
+      title: { show: false }, data: [{ value: val }]
+    }]
+  });
+  const ga = echarts.init(document.getElementById('gauge-a'));
+  chartInstances.push(ga);
+  ga.setOption(gaugeOpt(chinaExpA, colorA));
+  const gb = echarts.init(document.getElementById('gauge-b'));
+  chartInstances.push(gb);
+  gb.setOption(gaugeOpt(chinaExpB, colorB));
+
+  // Radar compare
+  const rc = echarts.init(document.getElementById('radar-compare'));
+  chartInstances.push(rc);
+  rc.setOption({
+    legend: { data: [a.name, b.name], bottom: 0, textStyle: { fontSize: 12 } },
+    radar: {
+      indicator: [
+        { name: '自动化风险', max: 10 }, { name: '需求增长', max: 10 },
+        { name: '薪资潜力', max: 10 }, { name: '入行门槛', max: 10 }, { name: 'AI协作机会', max: 10 }
+      ],
+      shape: 'circle',
+      splitArea: { areaStyle: { color: ['#f8fafc30', '#f1f5f930', '#e2e8f030', '#cbd5e130'] } },
+      axisName: { color: '#64748b', fontSize: 12 }
+    },
+    series: [{
+      type: 'radar',
+      data: [
+        { value: [a.radar.automationRisk, a.radar.demandGrowth, a.radar.salaryPotential, a.radar.entryBarrier, a.radar.aiCollaboration], name: a.name, areaStyle: { color: colorA + '25' }, lineStyle: { color: colorA, width: 2 }, itemStyle: { color: colorA } },
+        { value: [b.radar.automationRisk, b.radar.demandGrowth, b.radar.salaryPotential, b.radar.entryBarrier, b.radar.aiCollaboration], name: b.name, areaStyle: { color: colorB + '25' }, lineStyle: { color: colorB, width: 2 }, itemStyle: { color: colorB } }
+      ]
+    }]
+  });
+}
+
+// ===== NAVIGATION =====
+function showHome() {
+  disposeCharts();
+  currentView = 'home';
+  document.getElementById('home-view').classList.remove('hidden');
+  document.getElementById('detail-view').classList.add('hidden');
+  document.getElementById('compare-view').classList.add('hidden');
+  document.getElementById('compare-btn').classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
+  document.getElementById('compare-btn').classList.add('hover:bg-gray-100');
+  window.scrollTo(0, 0);
+}
+
+// ===== RESPONSIVE CHARTS =====
+window.addEventListener('resize', () => {
+  chartInstances.forEach(c => c.resize());
+});
+
+// ===== INIT =====
+renderCategoryTabs();
+filterMajors();
+</script>
+
+</body>
+</html>
